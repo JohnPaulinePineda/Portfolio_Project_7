@@ -512,40 +512,50 @@ References</strong></a></li>
 <div id="table-of-contents" class="section level1">
 <h1><strong>1. Table of Contents</strong></h1>
 <div class="line-block"><br />
-This document presents a non-exhaustive list of procedures for
-developing valid clinical prediction models for prognosis using various
-helpful packages in
-<mark style="background-color: #CCECFF"><strong>R</strong></mark>. The
-methods and results presented in the chapter entitled
+This project explores the best practices when developing and evaluating
+prognostic models for clinical research using various helpful packages
+in <mark style="background-color: #CCECFF"><strong>R</strong></mark>.
+The methods and results presented in the chapter entitled
 <mark style="background-color: #EEEEEE;color: #FF0000"><strong>Case
 Study on Survival Analysis: Prediction of Cardiovascular
 Events</strong></mark> using the
 <mark style="background-color: #EEEEEE;color: #FF0000"><strong>Second
 Manifestations of Arterial Diseases (SMART)</strong></mark> dataset from
 the book <a href="http://clinicalpredictionmodels.org/"><mark style="background-color: #CCECFF"><strong>Clinical
-Prediction Models</strong></mark></a> were replicated.<br />
+Prediction Models</strong></mark></a> were replicated. The general
+requirements for the clinical study were defined including the
+formulation of the research question, intended application, outcome,
+predictors, study design, statistical model and sample size computation.
+The individual steps involved in model development were presented
+including the data quality assessment, predictor coding, data
+preprocessing, as well as the specification, selection, performance
+estimation, performance validation and presentation of the model used in
+the study. Additional details on model validity evaluation was also
+provided.<br />
 <br />
-Clinical prediction models estimate the risk of existing disease
-(diagnostic prediction model) or future outcome (prognostic prediction
-model) for an individual, which is conditional on the values of multiple
-predictors (prognostic or risk factors) such as clinicopathological
-characteristics and biomarkers. As an explicit and empirical approach to
-estimating probabilities or outcomes of a disease, these models relate
-to evidence-based medicine which aims to use the current best evidence
-in making decisions about the care of individual patients.
-Evidence-based medicine applies the scientific method to medical
-practice. Its laudable intentions are to make clinical practice more
-scientific and empirically grounded and thereby achieving safer, more
-consistent, and more cost-effective care.<br />
+<strong>Clinical Prediction Models</strong> estimate the risk of
+existing disease (diagnostic prediction model) or future outcome
+(prognostic prediction model) for an individual, which is conditional on
+the values of multiple predictors (prognostic or risk factors) such as
+clinicopathological characteristics and biomarkers. As an explicit and
+empirical approach to estimating probabilities or outcomes of a disease,
+these models relate to evidence-based medicine which aims to use the
+current best evidence in making decisions about the care of individual
+patients. Evidence-based medicine applies the scientific method to
+medical practice. Its laudable intentions are to make clinical practice
+more scientific and empirically grounded and thereby achieving safer,
+more consistent, and more cost-effective care.<br />
 <br />
-Various guidelines such as the <a href="https://www.acpjournals.org/doi/10.7326/M14-0698">TRIPOD</a>
-(Transparent Reporting of a Multivariable Prediction Model for
-Individual Prognosis Or Diagnosis), <a href="https://www.equator-network.org/reporting-guidelines/stard/">STARD</a>
-(Standards for Reporting Diagnostic Accuracy Studies) and <a href="https://www.acpjournals.org/doi/10.7326/M18-1377">PROBAST</a>
-(Prediction Model Risk of Bias Assessment Tool) have been formulated
-which aim to improve the transparency in the reporting of clinical
-research studies developing, validating, or updating multivariable
-prediction models, whether for diagnostic or prognostic purposes.<br />
+Various guidelines such as the <a href="https://www.acpjournals.org/doi/10.7326/M14-0698"><strong>TRIPOD</strong></a>
+(<strong>Transparent Reporting of a Multivariable Prediction Model for
+Individual Prognosis Or Diagnosis</strong>), <a href="https://www.equator-network.org/reporting-guidelines/stard/"><strong>STARD</strong></a>
+(<strong>Standards for Reporting Diagnostic Accuracy Studies</strong>)
+and <a href="https://www.acpjournals.org/doi/10.7326/M18-1377"><strong>PROBAST</strong></a>
+(<strong>Prediction Model Risk of Bias Assessment Tool</strong>) have
+been formulated which aim to improve the transparency in the reporting
+of clinical research studies developing, validating, or updating
+multivariable prediction models, whether for diagnostic or prognostic
+purposes.<br />
 <br />
 Multivariable prediction models fall into two broad categories:
 diagnostic and prognostic prediction models. In both the diagnostic and
