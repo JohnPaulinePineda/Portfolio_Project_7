@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.width=15, fig.height=10)
 | Multivariable prediction models fall into two broad categories: diagnostic and prognostic prediction models. In both the diagnostic and prognostic setting, probability estimates are commonly based on combining information from multiple predictors observed or measured from an individual. In a diagnostic model, multiple predictors (often referred to as diagnostic test results) are combined to estimate the probability that a certain condition or disease is present (or absent) at the moment of prediction. In a prognostic model, multiple predictors are combined to estimate the probability of a particular outcome or event (for example, mortality, disease recurrence, complication, or therapy response) occurring in a certain period in the future. In virtually all medical domains, diagnostic and prognostic multivariable (risk) prediction models are being developed, validated, updated, and implemented with the aim to assist doctors and individuals in estimating probabilities and potentially influence their decision making.
 |
 ##  1.1 General Considerations
-
+|
 ### 1.1.1 Research Question
 |
 | The aim of the study was to develop a prediction model for long term outcome. Given the available follow-up, the yearly risks could be assessed reliably. Achieving adequate predictions was more prominent than insight in the predictor effects.    
@@ -68,6 +68,10 @@ knitr::opts_chunk$set(echo = TRUE, fig.width=15, fig.height=10)
 |  
 | **[C]** 460 recorded events resulting to an 11.88% event rate (460/3873). With 29 candidate predictors, the estimated events per variable (EPV) was equal to 16 which was sufficiently more than the minimum EPV requirement of 10.
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.1, warning=FALSE, message=FALSE}
 ##################################
 # Loading R libraries
@@ -135,6 +139,8 @@ PDA <- SMART
 
 ```
 
+</details>
+
 ### 1.2.2 Data Quality Assessment
 |
 | **[A]** Missing observations noted for 21 variables with NA.Count>0 and Fill.Rate<1.0.
@@ -170,6 +176,10 @@ PDA <- SMART
 |      **[C.3]** <span style="color: #FF0000">GLUT</span> variable (numeric) with Skewness=3.251
 |      **[C.4]** <span style="color: #FF0000">CREAT</span> variable (numeric) with Skewness=9.927
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.2, warning=FALSE, message=FALSE}
 ##################################
 # Loading dataset
@@ -383,6 +393,8 @@ if (length(names(DQA.Predictors.Numeric))==0) {
 
 ```
 
+</details>
+
 ### 1.2.3 Predictor Coding
 |
 | **[A]** Considering prognostic significance (determined using the Wald Chi-squared value from the formulated Cox regression models) as a criterion while maintaining model parsimony (minimal variable transformation), most predictors can be coded linearly during model development except for the following variables where a transformation might improve their performance:
@@ -390,6 +402,10 @@ if (length(names(DQA.Predictors.Numeric))==0) {
 |      **[A.2]** The <span style="color: #FF0000">CREAT</span> variable (numeric) was coded using its logarithm [log(CREAT)] since this demonstrated a better Wald Chi-squared value as compared to other transformation types.
 |      **[A.3]** The <span style="color: #FF0000">CEREBRAL</span> variable (numeric), <span style="color: #FF0000">CARDIAC</span> variable (numeric), <span style="color: #FF0000">AAA</span> variable (numeric) and <span style="color: #FF0000">PERIPH</span> variable (numeric) were coded using their linear combination [CEREBRAL + CARDIAC + (2*AAA) + PERIPH] since this demonstrated a better Wald Chi-squared value as compared to other transformation types.
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.3, warning=FALSE, message=FALSE}
 ##################################
 # Loading dataset
@@ -1249,6 +1265,8 @@ colnames(PredictorCodingSummary)<- c("Predictor",
 
 ```
 
+</details>
+
 ### 1.2.4 Data Preprocessing
 |
 | Missing data pattern assessment:
@@ -1267,6 +1285,10 @@ colnames(PredictorCodingSummary)<- c("Predictor",
 |      **[A.1]** Relatively good data plausibility for the numeric variables in the imputed dataset as compared to the original dataset for all 5 iterations.
 |      **[A.2]** Relatively good data plausibility for the categorical variables in the imputed dataset as compared to the original dataset for all 5 iterations.
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 
 ```{r section_1.2.4, warning=FALSE, message=FALSE, fig.width=15, fig.height=15}
 ##################################
@@ -2255,6 +2277,7 @@ grid.arrange(BAR_DIABETES,
 
 ```
 
+</details>
 
 ### 1.2.5 Model Specification
 |
@@ -2291,6 +2314,10 @@ grid.arrange(BAR_DIABETES,
 |
 | **[C]** The five imputed datasets (<span style="color: #FF0000">aregImputed_1</span>, <span style="color: #FF0000">aregImputed_2</span>, <span style="color: #FF0000">aregImputed_3</span>, <span style="color: #FF0000">aregImputed_4</span> and <span style="color: #FF0000">aregImputed_5</span>) demonstrated generally stable estimated coefficients for the full cox proportional hazards model. The imputed data from iteration 3 (<span style="color: #FF0000">aregImputed_3</span>) was assigned for the subsequent model selection process. 
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.5, warning=FALSE, message=FALSE}
 ##################################
 # Loading the modelling dataset
@@ -2887,6 +2914,8 @@ barchart(COXPH.FULL.AREGIMPUTED_12345.Coefficients,
 
 ```
 
+</details>
+
 ### 1.2.6 Model Selection
 |
 | **[A]** Using the imputed data from iteration 3 (<span style="color: #FF0000">aregImputed_3</span>), the full model initially consisted of 14 variables:
@@ -2918,6 +2947,10 @@ barchart(COXPH.FULL.AREGIMPUTED_12345.Coefficients,
 |
 | **[C]** The reduced model was justified as the inclusion of the variables creating a full model did not show any significant improvement to model fit (p=0.654, Likelihood Ratio Test).
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.6, warning=FALSE, message=FALSE}
 ##################################
 # Loading the 3RD imputation results from AREG
@@ -3070,6 +3103,8 @@ anova(COXPH.REDUCEDFINAL.AREGIMPUTED_3,
 
 ```
 
+</details>
+
 ### 1.2.7 Model Performance Estimation
 |
 | **[A]** The reduced model containing 9 variables was selected as the final model. The p-values for the Likelihood Ratio Test, Wald Test, and Log-Rank Test were all significant, indicating that the model and the variables used were statistically sound for prediction. All three test statistics were in close agreement with the omnibus null hypothesis (that all of the betas are 0) sufficiently rejected. The concordance statistic which represents model discrimination performance was reasonably high at 0.692. 
@@ -3093,6 +3128,10 @@ anova(COXPH.REDUCEDFINAL.AREGIMPUTED_3,
 |      **[E.1]** The Schoenfeld Test global  p-value was insignificant indicating that the hazard rate determined from the model and the associated variables remained constant over time. The proportionality hazards assumption was met validating the model.
 |      **[E.2]** Individually, the <span style="color: #FF0000">BMI</span>, <span style="color: #FF0000">HDL</span>, <span style="color: #FF0000">DIABETES</span>, <span style="color: #FF0000">CREAT</span>, <span style="color: #FF0000">albumin</span>, <span style="color: #FF0000">STENOSIS</span> and <span style="color: #FF0000">IMT</span> variables showed insignificant Schoenfeld Test p-values indicating no time dependency. However, the <span style="color: #FF0000">AGE_SQUAREDAFTER50</span> and <span style="color: #FF0000">SUMSCORE_5LEVELS</span> variables were potentially time-dependent given their marginally significant Schoenfeld Test p-values. These variables and their corresponding transformations were maintained with no adjustments in the model due to their relatively minimal effect on the overall results although these observation were noted.
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.7, warning=FALSE, message=FALSE}
 ##################################
 # Summarizing the FINAL REDUCED model
@@ -3170,12 +3209,18 @@ ggpar(COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMPlot,
 
 ```
 
+</details>
+
 ### 1.2.8 Model Performance Validation
 |
 | **[A]** The entire process of model development including variable selection was internally validated using a 200-cycle bootstrap to determine the optimism-adjusted model performance. Results showed that:
 |      **[A.1]** Only 183 random seeds of the 200 cycles resulted to valid models. 17 of the random seeds did not generate final models potentially due to the unmet AIC criterion applied during model selection. 
 |      **[A.2]** Optimism in terms of model discrimination using the concordance statistic was estimated to be reasonably low at 0.035. In effect, the optimism-adjusted concordance statistic was computed to be 0.657 from the previously determined optimistic value of 0.692. Results indicate that the overfitting effects during model development were minimal.
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.8, warning=FALSE, message=FALSE}
 ##################################
 # Implementing internal cross validation
@@ -3403,6 +3448,8 @@ print(ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary,row.names=FALSE)
 
 ```
 
+</details>
+
 ### 1.2.9 Model Presentation
 |
 | **[A]** The reduced model was graphically represented by a nomogram which could generate the survival (probability of being free of a cardiovascular event) for an individual case given the following clinical variables :
@@ -3416,6 +3463,10 @@ print(ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary,row.names=FALSE)
 |      **[A.8]** <span style="color: #FF0000">STENOSIS</span> variable (factor)
 |      **[A.9]** <span style="color: #FF0000">IMT</span> variable (numeric)
 |
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
 ```{r section_1.2.9, warning=FALSE, message=FALSE, fig.width=15, fig.height=15}
 COXPH.REDUCED.AREGIMPUTED_3 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
                                  BMI +
@@ -3464,9 +3515,10 @@ plot(COXPH.REDUCED.AREGIMPUTED_3.Nomogram)
 
 ```
 
+</details>
+
 ## 1.3 Model Validity Evaluation
-
-
+|
 ### 1.3.1 Internal Overfitting
 |
 | Internal overfitting was effectively managed by using a sufficiently large sample size in the study, considering literature and previous research results in the choice of candidate predictors and employing an objective selection of the final predictors.
