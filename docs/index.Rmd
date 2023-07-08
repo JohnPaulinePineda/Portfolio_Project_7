@@ -3150,7 +3150,7 @@ tbl_regression(COXPH.REDUCEDFINAL.AREGIMPUTED_3,
 (ggforest(COXPH.REDUCEDFINAL.AREGIMPUTED_3, 
           data=SMART.AREGIMPUTED_3,
           main = "",
-          fontsize = 1))
+          fontsize = 0.90))
 
 
 ##################################
@@ -3172,18 +3172,18 @@ COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMPlot <- ggsurvplot(COXPH.REDUCEDFINAL.AREGIMP
                                                       risk.table.title="Number at Risk (Estimated Probability)",
                                                       risk.table.y.text.col = FALSE,
                                                       risk.table.y.text = TRUE,
-                                                      fontsize = 5,
+                                                      fontsize = 3,
                                                       ncensor.plot = FALSE,
                                                       surv.median.line = "hv",
                                                       palette = c("#000000"))
 
 ggpar(COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMPlot,
-      font.title = c(20,"bold"),
-      font.x = c(15,"bold"),
-      font.y = c(15,"bold"),
-      font.legend=c(15,"bold"),
-      font.xtickslab=c(12,"bold","black"),
-      font.ytickslab=c(12,"bold","black"))
+      font.title = c(14,"bold"),
+      font.x = c(12,"bold"),
+      font.y = c(12,"bold"),
+      font.legend=c(12),
+      font.xtickslab=c(9,"black"),
+      font.ytickslab=c(9,"black"))
 
 ##################################
 # Testing for the proportional hazards assumption
@@ -3201,11 +3201,11 @@ ggpar(COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMPlot,
          point.shape = 19,
          point.alpha = 0.10,
   ggtheme = theme_survminer(),
-  font.main = c(15,"bold"),
+  font.main = c(12,"bold"),
   font.x = c(12,"bold"),
   font.y = c(12,"bold"),
-  font.xtickslab=c(10,"bold","black"),
-  font.ytickslab=c(10,"bold","black")))
+  font.xtickslab=c(9,"black"),
+  font.ytickslab=c(9,"black")))
 
 ```
 
