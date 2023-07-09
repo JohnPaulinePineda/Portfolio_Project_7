@@ -1,5 +1,5 @@
 ---
-title: 'R : Clinical Research Prediction Model Development and Evaluation for Prognosis'
+title: 'Supervised Learning : Clinical Research Prediction Model Development and Evaluation for Prognosis'
 author: "John Pauline Pineda"
 date: '2022-09-14'
 output: 
