@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.width=15, fig.height=10)
 ```
 # **1. Table of Contents**
 |
-| This project explores the best practices when developing and evaluating prognostic models for clinical research using various helpful packages in <mark style="background-color: #CCECFF">**R**</mark>. The methods and results presented in the chapter entitled <mark style="background-color: #EEEEEE;color: #FF0000">**Case Study on Survival Analysis: Prediction of Cardiovascular Events**</mark> using the <mark style="background-color: #EEEEEE;color: #FF0000">**Second Manifestations of Arterial Diseases (SMART)**</mark> dataset from the book [<mark style="background-color: #CCECFF">**Clinical Prediction Models**</mark>](http://clinicalpredictionmodels.org/) were replicated. The general requirements for the clinical study were defined including the formulation of the research question, intended application, outcome, predictors, study design, statistical model and sample size computation. The individual steps involved in model development were presented including the data quality assessment, predictor coding, data preprocessing, as well as the specification, selection, performance estimation, performance validation and presentation of the model used in the study. Additional details on model validity evaluation was also provided.
+| This project explores the best practices when developing and evaluating prognostic models for clinical research using various helpful packages in <mark style="background-color: #CCECFF">**R**</mark>. The methods and results presented in the chapter entitled <mark style="background-color: #EEEEEE;color: #FF0000">**Case Study on Survival Analysis: Prediction of Cardiovascular Events**</mark> using the <mark style="background-color: #EEEEEE;color: #FF0000">**Second Manifestations of Arterial Diseases (SMART)**</mark> dataset from the book [<mark style="background-color: #CCECFF">**Clinical Prediction Models**</mark>](http://clinicalpredictionmodels.org/) were replicated. The general requirements for the clinical study were defined including the formulation of the research question, intended application, outcome, predictors, study design, statistical model and sample size computation. The individual steps involved in model development were presented including the data quality assessment, predictor coding, data preprocessing, as well as the specification, selection, performance estimation, performance validation and presentation of the model used in the study. Additional details on model validity evaluation was also provided. All results were consolidated in a [<span style="color: #FF0000">**Summary**</span>](#summary) presented at the end of the document.
 |
 | **Clinical Prediction Models** estimate the risk of existing disease (diagnostic prediction model) or future outcome (prognostic prediction model) for an individual, which is conditional on the values of multiple predictors (prognostic or risk factors) such as clinicopathological characteristics and biomarkers. As an explicit and empirical approach to estimating probabilities or outcomes of a disease, these models relate to evidence-based medicine which aims to use the current best evidence in making decisions about the care of individual patients. Evidence-based medicine applies the scientific method to medical practice. Its laudable intentions are to make clinical practice more scientific and empirically grounded and thereby achieving safer, more consistent, and more cost-effective care.
 |
@@ -2310,7 +2310,7 @@ grid.arrange(BAR_DIABETES,
 |      **[B.12]** <span style="color: #FF0000">ALBUMIN</span> variable (factor)
 |      **[B.13]** <span style="color: #FF0000">STENOSIS</span> variable (factor)
 |      **[B.14]** <span style="color: #FF0000">IMT</span> variable (numeric)
-|      **[B.14]** <span style="color: #FF0000">HOMOC</span> variable (numeric)
+|      **[B.15]** <span style="color: #FF0000">HOMOC</span> variable (numeric)
 |
 | **[C]** The five imputed datasets (<span style="color: #FF0000">aregImputed_1</span>, <span style="color: #FF0000">aregImputed_2</span>, <span style="color: #FF0000">aregImputed_3</span>, <span style="color: #FF0000">aregImputed_4</span> and <span style="color: #FF0000">aregImputed_5</span>) demonstrated generally stable estimated coefficients for the full cox proportional hazards model. The imputed data from iteration 3 (<span style="color: #FF0000">aregImputed_3</span>) was assigned for the subsequent model selection process. 
 |
@@ -3527,7 +3527,11 @@ plot(COXPH.REDUCED.AREGIMPUTED_3.Nomogram)
 |
 | Although, external generalizability was not particularly assessed in the study, a large set of predictors representing important domains related to the subject matter was considered to ensure that the predictions made from the model are valid for plausibly related populations.
 |
-# **2. References**
+# **2. Summary** <a name="summary"></a>
+|
+| ![](D:/Github_Codes/ProjectPortfolio/Portfolio_Project_7/docs/Project7_Summary.png)
+|
+# **3. References**
 |
 | **[Book]** [Clinical Prediction Models](http://clinicalpredictionmodels.org/) by Ewout Steyerberg
 | **[Book]** [Survival Analysis: A Self-Learning Text](https://link.springer.com/book/10.1007/978-1-4419-6646-9/) by David Kleinbaum and Mitchel Klein
