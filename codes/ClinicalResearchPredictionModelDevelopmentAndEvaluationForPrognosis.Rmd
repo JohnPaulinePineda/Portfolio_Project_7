@@ -1,0 +1,3582 @@
+---
+title: 'Supervised Learning : Clinical Research Prediction Model Development and Evaluation for Prognosis'
+author: "John Pauline Pineda"
+date: '2022-09-14'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: readable
+    highlight: tango
+    css: doc.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width=15, fig.height=10)
+```
+# **1. Table of Contents**
+|
+| This project explores the best practices when developing and evaluating prognostic models for clinical research using various helpful packages in <mark style="background-color: #CCECFF">**R**</mark>. The methods and results presented in the chapter entitled <mark style="background-color: #EEEEEE;color: #FF0000">**Case Study on Survival Analysis: Prediction of Cardiovascular Events**</mark> using the <mark style="background-color: #EEEEEE;color: #FF0000">**Second Manifestations of Arterial Diseases (SMART)**</mark> dataset from the book [<mark style="background-color: #CCECFF">**Clinical Prediction Models**</mark>](http://clinicalpredictionmodels.org/) were replicated. The general requirements for the clinical study were defined including the formulation of the research question, intended application, outcome, predictors, study design, statistical model and sample size computation. The individual steps involved in model development were presented including the data quality assessment, predictor coding, data preprocessing, as well as the specification, selection, performance estimation, performance validation and presentation of the model used in the study. Additional details on model validity evaluation was also provided. All results were consolidated in a [<span style="color: #FF0000">**Summary**</span>](#summary) presented at the end of the document.
+|
+| **Clinical Prediction Models** estimate the risk of existing disease (diagnostic prediction model) or future outcome (prognostic prediction model) for an individual, which is conditional on the values of multiple predictors (prognostic or risk factors) such as clinicopathological characteristics and biomarkers. As an explicit and empirical approach to estimating probabilities or outcomes of a disease, these models relate to evidence-based medicine which aims to use the current best evidence in making decisions about the care of individual patients. Evidence-based medicine applies the scientific method to medical practice. Its laudable intentions are to make clinical practice more scientific and empirically grounded and thereby achieving safer, more consistent, and more cost-effective care.
+|
+| Various guidelines such as the [**TRIPOD**](https://www.acpjournals.org/doi/10.7326/M14-0698) (**Transparent Reporting of a Multivariable Prediction Model for Individual Prognosis Or Diagnosis**), [**STARD**](https://www.equator-network.org/reporting-guidelines/stard/) (**Standards for Reporting Diagnostic Accuracy Studies**) and [**PROBAST**](https://www.acpjournals.org/doi/10.7326/M18-1377) (**Prediction Model Risk of Bias Assessment Tool**) have been formulated which aim to improve the transparency in the reporting of clinical research studies developing, validating, or updating multivariable prediction models, whether for diagnostic or prognostic purposes. 
+|
+| Multivariable prediction models fall into two broad categories: diagnostic and prognostic prediction models. In both the diagnostic and prognostic setting, probability estimates are commonly based on combining information from multiple predictors observed or measured from an individual. In a diagnostic model, multiple predictors (often referred to as diagnostic test results) are combined to estimate the probability that a certain condition or disease is present (or absent) at the moment of prediction. In a prognostic model, multiple predictors are combined to estimate the probability of a particular outcome or event (for example, mortality, disease recurrence, complication, or therapy response) occurring in a certain period in the future. In virtually all medical domains, diagnostic and prognostic multivariable (risk) prediction models are being developed, validated, updated, and implemented with the aim to assist doctors and individuals in estimating probabilities and potentially influence their decision making.
+|
+##  1.1 General Considerations
+|
+### 1.1.1 Research Question
+|
+| The aim of the study was to develop a prediction model for long term outcome. Given the available follow-up, the yearly risks could be assessed reliably. Achieving adequate predictions was more prominent than insight in the predictor effects.    
+|
+### 1.1.2 Intended Application
+|
+| The intended application of the study was more toward clinical practice rather than experimental research - particularly on inpatient counseling where a high absolute risk might motivate patients to change inappropriate lifestyles and to comply with their medication regimens.   
+|
+### 1.1.3 Outcome
+|
+| The primary outcome was any cardiovascular event, comprised of cardiovascular death, non-fatal stroke, and non-fatal myocardial infarction. Combining different events was made to increase statistical power (which is a common approach for vascular research).   
+|
+### 1.1.4 Predictors
+|
+| The selection of predictors was motivated by characteristics included in the [Framingham](https://pubmed.ncbi.nlm.nih.gov/5921755/) and [SCORE](https://pubmed.ncbi.nlm.nih.gov/12788299/) models. The relationship with future events has also been established for several traditional risk factors, including hyperhomocysteinemia, intima-media thickness (IMT) and creatinine. Other candidate predictors were demographics (sex and age) and risk factors for vascular events in the general population (smoking, alcohol use, body mass index, diastolic and systolic blood pressure, lipids and diabetes). In addition, indicators of atherosclerosis were added as relevant predictors in the study including location of symptomatic vascular disease (cerebral, coronary, peripheral arterial disease or abdominal aortic aneurysm (AAA)) and markers of the extent of atherosclerosis (homocysteine, creatinine, albumin, intima-media thickness (IMT) and presence of carotid artery stenosis).    
+|
+### 1.1.5 Study Design
+|
+| The study was designed as a prospective dynamic cohort study. Patients were enrolled when presenting at the hospital with follow-up starting from study inclusion.   
+|
+### 1.1.6 Statistical Model
+|
+| The default statistical model for survival outcomes - Cox proportional hazard regression model was used which was deemed appropriate for such a relatively short-term study as 5-year cumulative incidence of cardiovascular events.   
+|
+### 1.1.7 Sample Size
+|
+| With the minimum events per variable (EPV) generally targeted at 10 and having identified 29 candidate predictors, the study required at least 290 events gathered prospectively during the course of the study follow-up period.  
+|
+##  1.2 Modelling Steps
+
+### 1.2.1 Sample Data
+|
+| The <mark style="background-color: #EEEEEE;color: #FF0000">**Second Manifestations of Arterial Diseases (SMART)**</mark>  dataset contained:
+|
+| **[A]** 3873 rows (observations)
+|
+| **[B]** 29 columns (variables)
+|      **[B.1]** 2/29 response = <span style="color: #FF0000">TEVENT</span> variable (numeric) and <span style="color: #FF0000">EVENT</span> variable (factor)
+|      **[B.2]** 27/29 predictors = All remaining variables (18/27 numeric + 9/27 factor)
+|  
+| **[C]** 460 recorded events resulting to an 11.88% event rate (460/3873). With 29 candidate predictors, the estimated events per variable (EPV) was equal to 16 which was sufficiently more than the minimum EPV requirement of 10.
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.1, warning=FALSE, message=FALSE}
+##################################
+# Loading R libraries
+##################################
+library("survival")
+library("survminer")
+library("mice")
+library("foreign")
+library("rms")
+library("Hmisc")
+library("VIM")
+library("gridExtra")
+library("finalfit")
+library("knitr")
+library("dplyr")
+library("gtsummary")
+library("tidyr")
+library("purrr")
+library("moments")
+
+######################################
+# Setting the working directory
+######################################
+setwd("D:/R_Codes/Markdown/SurvivalAnalysis")
+
+##################################
+# Loading dataset
+##################################
+SMART <- read.spss("SMARTst.sav",use.value.labels=F,to.data.frame=T)
+
+##################################
+# Performing a general exploration of the dataset
+##################################
+dim(SMART)
+summary(SMART)
+describe(SMART)
+
+##################################
+# Performing re-categorization and re-grouping
+# of factor variables
+##################################
+SMART$EVENT     <- as.factor(SMART$EVENT)
+SMART$SEX       <- as.factor(SMART$SEX)
+SMART$DIABETES  <- as.factor(SMART$DIABETES)
+SMART$CEREBRAL  <- as.factor(SMART$CEREBRAL)
+SMART$CARDIAC   <- as.factor(SMART$CARDIAC)
+SMART$AAA       <- as.factor(SMART$AAA)
+SMART$PERIPH    <- as.factor(SMART$PERIPH)
+SMART$STENOSIS  <- as.factor(SMART$STENOSIS)
+SMART$albumin   <- as.factor(SMART$albumin)
+SMART$SMOKING   <- as.factor(SMART$SMOKING)
+SMART$alcohol   <- as.factor(SMART$alcohol)
+
+##################################
+# Formulating a data type assessment summary
+##################################
+PDA <- SMART
+(PDA.Summary <- data.frame(
+  Column.Index=c(1:length(names(PDA))),
+  Column.Name= names(PDA), 
+  Column.Type=sapply(PDA, function(x) class(x)), 
+  row.names=NULL)
+)
+
+
+```
+
+</details>
+
+### 1.2.2 Data Quality Assessment
+|
+| **[A]** Missing observations noted for 21 variables with NA.Count>0 and Fill.Rate<1.0.
+|      **[A.1]** <span style="color: #FF0000">DIABETES</span> variable (factor) with NA.Count=40 and Fill.Rate=0.990 
+|      **[A.2]** <span style="color: #FF0000">STENOSIS</span> variable (factor) with NA.Count=93 and Fill.Rate=0.976 
+|      **[A.3]** <span style="color: #FF0000">SYSTBP</span> variable (numeric) with NA.Count=1223 and Fill.Rate=0.684 
+|      **[A.4]** <span style="color: #FF0000">DIASTBP</span> variable (numeric) with NA.Count=1221 and Fill.Rate=0.685 
+|      **[A.5]** <span style="color: #FF0000">SYSTH</span> variable (numeric) with NA.Count=1498 and Fill.Rate=0.613 
+|      **[A.6]** <span style="color: #FF0000">DIASTH</span> variable (numeric) with NA.Count=1499 and Fill.Rate=0.613 
+|      **[A.7]** <span style="color: #FF0000">LENGTH</span> variable (numeric) with NA.Count=1 and Fill.Rate=1.000
+|      **[A.8]** <span style="color: #FF0000">WEIGHT</span> variable (numeric) with NA.Count=2 and Fill.Rate=0.999 
+|      **[A.9]** <span style="color: #FF0000">BMI</span> variable (numeric) with NA.Count=3 and Fill.Rate=0.999 
+|      **[A.10]** <span style="color: #FF0000">CHOL</span> variable (numeric) with NA.Count=18 and Fill.Rate=0.995 
+|      **[A.11]** <span style="color: #FF0000">HDL</span> variable (numeric) with NA.Count=30 and Fill.Rate=0.992 
+|      **[A.12]** <span style="color: #FF0000">LDL</span> variable (numeric) with NA.Count=216 and Fill.Rate=0.944 
+|      **[A.13]** <span style="color: #FF0000">TRIG</span> variable (numeric) with NA.Count=28 and Fill.Rate=0.993 
+|      **[A.14]** <span style="color: #FF0000">HOMOC</span> variable (numeric) with NA.Count=463 and Fill.Rate=0.880 
+|      **[A.15]** <span style="color: #FF0000">GLUT</span> variable (numeric) with NA.Count=19 and Fill.Rate=0.995 
+|      **[A.16]** <span style="color: #FF0000">CREAT</span> variable (numeric) with NA.Count=17 and Fill.Rate=0.996 
+|      **[A.17]** <span style="color: #FF0000">IMT</span> variable (numeric) with NA.Count=98 and Fill.Rate=0.975 
+|      **[A.18]** <span style="color: #FF0000">albumin</span> variable (factor) with NA.Count=207 and Fill.Rate=0.947 
+|      **[A.19]** <span style="color: #FF0000">SMOKING</span> variable (factor) with NA.Count=25 and Fill.Rate=0.994 
+|      **[A.20]** <span style="color: #FF0000">packyrs</span> variable (numeric) with NA.Count=21 and Fill.Rate=0.995 
+|      **[A.21]** <span style="color: #FF0000">alcohol</span> variable (factor) with NA.Count=25 and Fill.Rate=0.994 
+|
+| **[B]** Low variance noted for 2 variables with First.Second.Mode.Ratio>5 or Unique.Count.Ratio<0.01.
+|      **[B.1]** <span style="color: #FF0000">AAA</span> variable (factor) with First.Second.Mode.Ratio=8.310 
+|      **[B.2]** <span style="color: #FF0000">packyrs</span> variable (numeric) with First.Second.Mode.Ratio=16.595 
+|
+| **[C]** High skewness noted for 4 variables with Skewness>3 or Skewness<(-3).
+|      **[C.1]** <span style="color: #FF0000">TRIG</span> variable (numeric) with Skewness=14.074 
+|      **[C.2]** <span style="color: #FF0000">HOMOC</span> variable (numeric) with Skewness=19.387
+|      **[C.3]** <span style="color: #FF0000">GLUT</span> variable (numeric) with Skewness=3.251
+|      **[C.4]** <span style="color: #FF0000">CREAT</span> variable (numeric) with Skewness=9.927
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.2, warning=FALSE, message=FALSE}
+##################################
+# Loading dataset
+##################################
+DQA <- SMART
+
+##################################
+# Listing all predictors
+##################################
+DQA.Predictors <- DQA[,!names(DQA) %in% c("TEVENT","EVENT")]
+
+##################################
+# Formulating an overall data quality assessment summary
+##################################
+(DQA.Summary <- data.frame(
+  Column.Index=c(1:length(names(DQA))),
+  Column.Name= names(DQA), 
+  Column.Type=sapply(DQA, function(x) class(x)), 
+  Row.Count=sapply(DQA, function(x) nrow(DQA)),
+  NA.Count=sapply(DQA,function(x)sum(is.na(x))),
+  Fill.Rate=sapply(DQA,function(x)format(round((sum(!is.na(x))/nrow(DQA)),3),nsmall=3)),
+  row.names=NULL)
+)
+
+##################################
+# Listing all numeric predictors
+##################################
+DQA.Predictors.Numeric <- DQA.Predictors[,sapply(DQA.Predictors, is.numeric)]
+
+if (length(names(DQA.Predictors.Numeric))>0) {
+    print(paste0("There are ",
+               (length(names(DQA.Predictors.Numeric))),
+               " numeric predictor variable(s)."))
+} else {
+  print("There are no numeric predictor variables.")
+}
+
+##################################
+# Listing all factor predictors
+##################################
+DQA.Predictors.Factor <- DQA.Predictors[,sapply(DQA.Predictors, is.factor)]
+
+if (length(names(DQA.Predictors.Factor))>0) {
+    print(paste0("There are ",
+               (length(names(DQA.Predictors.Factor))),
+               " factor predictor variable(s)."))
+} else {
+  print("There are no factor predictor variables.")
+}
+
+##################################
+# Formulating a data quality assessment summary for factor predictors
+##################################
+if (length(names(DQA.Predictors.Factor))>0) {
+  
+  ##################################
+  # Formulating a function to determine the first mode
+  ##################################
+  FirstModes <- function(x) {
+    ux <- unique(na.omit(x))
+    tab <- tabulate(match(x, ux))
+    ux[tab == max(tab)]
+  }
+
+  ##################################
+  # Formulating a function to determine the second mode
+  ##################################
+  SecondModes <- function(x) {
+    ux <- unique(na.omit(x))
+    tab <- tabulate(match(x, ux))
+    fm = ux[tab == max(tab)]
+    sm = x[!(x %in% fm)]
+    usm <- unique(sm)
+    tabsm <- tabulate(match(sm, usm))
+    usm[tabsm == max(tabsm)]
+  }
+  
+  (DQA.Predictors.Factor.Summary <- data.frame(
+  Column.Name= names(DQA.Predictors.Factor), 
+  Column.Type=sapply(DQA.Predictors.Factor, function(x) class(x)), 
+  Unique.Count=sapply(DQA.Predictors.Factor, function(x) length(unique(x))),
+  First.Mode.Value=sapply(DQA.Predictors.Factor, function(x) as.character(FirstModes(x)[1])),
+  Second.Mode.Value=sapply(DQA.Predictors.Factor, function(x) as.character(SecondModes(x)[1])),
+  First.Mode.Count=sapply(DQA.Predictors.Factor, function(x) sum(na.omit(x) == FirstModes(x)[1])),
+  Second.Mode.Count=sapply(DQA.Predictors.Factor, function(x) sum(na.omit(x) == SecondModes(x)[1])),
+  Unique.Count.Ratio=sapply(DQA.Predictors.Factor, function(x) format(round((length(unique(x))/nrow(DQA.Predictors.Factor)),3), nsmall=3)),
+  First.Second.Mode.Ratio=sapply(DQA.Predictors.Factor, function(x) format(round((sum(na.omit(x) == FirstModes(x)[1])/sum(na.omit(x) == SecondModes(x)[1])),3), nsmall=3)),
+  row.names=NULL)
+  )
+  
+} 
+
+##################################
+# Formulating a data quality assessment summary for numeric predictors
+##################################
+if (length(names(DQA.Predictors.Numeric))>0) {
+  
+  ##################################
+  # Formulating a function to determine the first mode
+  ##################################
+  FirstModes <- function(x) {
+    ux <- unique(na.omit(x))
+    tab <- tabulate(match(x, ux))
+    ux[tab == max(tab)]
+  }
+
+  ##################################
+  # Formulating a function to determine the second mode
+  ##################################
+  SecondModes <- function(x) {
+    ux <- unique(na.omit(x))
+    tab <- tabulate(match(x, ux))
+    fm = ux[tab == max(tab)]
+    sm = na.omit(x)[!(na.omit(x) %in% fm)]
+    usm <- unique(sm)
+    tabsm <- tabulate(match(sm, usm))
+    usm[tabsm == max(tabsm)]
+  }
+  
+  (DQA.Predictors.Numeric.Summary <- data.frame(
+  Column.Name= names(DQA.Predictors.Numeric), 
+  Column.Type=sapply(DQA.Predictors.Numeric, function(x) class(x)), 
+  Unique.Count=sapply(DQA.Predictors.Numeric, function(x) length(unique(x))),
+  Unique.Count.Ratio=sapply(DQA.Predictors.Numeric, function(x) format(round((length(unique(x))/nrow(DQA.Predictors.Numeric)),3), nsmall=3)),
+  First.Mode.Value=sapply(DQA.Predictors.Numeric, function(x) format(round((FirstModes(x)[1]),3),nsmall=3)),
+  Second.Mode.Value=sapply(DQA.Predictors.Numeric, function(x) format(round((SecondModes(x)[1]),3),nsmall=3)),
+  First.Mode.Count=sapply(DQA.Predictors.Numeric, function(x) sum(na.omit(x) == FirstModes(x)[1])),
+  Second.Mode.Count=sapply(DQA.Predictors.Numeric, function(x) sum(na.omit(x) == SecondModes(x)[1])),
+  First.Second.Mode.Ratio=sapply(DQA.Predictors.Numeric, function(x) format(round((sum(na.omit(x) == FirstModes(x)[1])/sum(na.omit(x) == SecondModes(x)[1])),3), nsmall=3)),
+  Minimum=sapply(DQA.Predictors.Numeric, function(x) format(round(min(x,na.rm = TRUE),3), nsmall=3)),
+  Mean=sapply(DQA.Predictors.Numeric, function(x) format(round(mean(x,na.rm = TRUE),3), nsmall=3)),
+  Median=sapply(DQA.Predictors.Numeric, function(x) format(round(median(x,na.rm = TRUE),3), nsmall=3)),
+  Maximum=sapply(DQA.Predictors.Numeric, function(x) format(round(max(x,na.rm = TRUE),3), nsmall=3)),
+  Skewness=sapply(DQA.Predictors.Numeric, function(x) format(round(moments::skewness(x,na.rm = TRUE),3), nsmall=3)),
+  Kurtosis=sapply(DQA.Predictors.Numeric, function(x) format(round(moments::kurtosis(x,na.rm = TRUE),3), nsmall=3)),
+  Percentile25th=sapply(DQA.Predictors.Numeric, function(x) format(round(quantile(x,probs=0.25,na.rm = TRUE),3), nsmall=3)),
+  Percentile75th=sapply(DQA.Predictors.Numeric, function(x) format(round(quantile(x,probs=0.75,na.rm = TRUE),3), nsmall=3)),
+  row.names=NULL)
+  )  
+  
+}
+
+##################################
+# Identifying potential data quality issues
+##################################
+
+##################################
+# Checking for missing observations
+##################################
+if ((nrow(DQA.Summary[DQA.Summary$NA.Count>0,]))>0){
+  print(paste0("Missing observations noted for ",
+               (nrow(DQA.Summary[DQA.Summary$NA.Count>0,])),
+               " variable(s) with NA.Count>0 and Fill.Rate<1.0."))
+  DQA.Summary[DQA.Summary$NA.Count>0,]
+} else {
+  print("No missing observations noted.")
+}
+
+##################################
+# Checking for zero or near-zero variance predictors
+##################################
+if (length(names(DQA.Predictors.Factor))==0) {
+  print("No factor predictors noted.")
+} else if (nrow(DQA.Predictors.Factor.Summary[as.numeric(as.character(DQA.Predictors.Factor.Summary$First.Second.Mode.Ratio))>5,])>0){
+  print(paste0("Low variance observed for ",
+               (nrow(DQA.Predictors.Factor.Summary[as.numeric(as.character(DQA.Predictors.Factor.Summary$First.Second.Mode.Ratio))>5,])),
+               " factor variable(s) with First.Second.Mode.Ratio>5."))
+  DQA.Predictors.Factor.Summary[as.numeric(as.character(DQA.Predictors.Factor.Summary$First.Second.Mode.Ratio))>5,]
+} else {
+  print("No low variance factor predictors due to high first-second mode ratio noted.")
+}
+
+if (length(names(DQA.Predictors.Numeric))==0) {
+  print("No numeric predictors noted.")
+} else if (nrow(DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$First.Second.Mode.Ratio))>5,])>0){
+  print(paste0("Low variance observed for ",
+               (nrow(DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$First.Second.Mode.Ratio))>5,])),
+               " numeric variable(s) with First.Second.Mode.Ratio>5."))
+  DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$First.Second.Mode.Ratio))>5,]
+} else {
+  print("No low variance numeric predictors due to high first-second mode ratio noted.")
+}
+
+if (length(names(DQA.Predictors.Numeric))==0) {
+  print("No numeric predictors noted.")
+} else if (nrow(DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$Unique.Count.Ratio))<0.01,])>0){
+  print(paste0("Low variance observed for ",
+               (nrow(DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$Unique.Count.Ratio))<0.01,])),
+               " numeric variable(s) with Unique.Count.Ratio<0.01."))
+  DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$Unique.Count.Ratio))<0.01,]
+} else {
+  print("No low variance numeric predictors due to low unique count ratio noted.")
+}
+
+##################################
+# Checking for skewed predictors
+##################################
+if (length(names(DQA.Predictors.Numeric))==0) {
+  print("No numeric predictors noted.")
+} else if (nrow(DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$Skewness))>3 |
+                                               as.numeric(as.character(DQA.Predictors.Numeric.Summary$Skewness))<(-3),])>0){
+  print(paste0("High skewness observed for ",
+  (nrow(DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$Skewness))>3 |
+                                               as.numeric(as.character(DQA.Predictors.Numeric.Summary$Skewness))<(-3),])),
+  " numeric variable(s) with Skewness>3 or Skewness<(-3)."))
+  DQA.Predictors.Numeric.Summary[as.numeric(as.character(DQA.Predictors.Numeric.Summary$Skewness))>3 |
+                                 as.numeric(as.character(DQA.Predictors.Numeric.Summary$Skewness))<(-3),]
+} else {
+  print("No skewed numeric predictors noted.")
+}
+
+```
+
+</details>
+
+### 1.2.3 Predictor Coding
+|
+| **[A]** Considering prognostic significance (determined using the Wald Chi-squared value from the formulated Cox regression models) as a criterion while maintaining model parsimony (minimal variable transformation), most predictors can be coded linearly during model development except for the following variables where a transformation might improve their performance:
+|      **[A.1]** The <span style="color: #FF0000">AGE</span> variable (numeric) was coded using its squared value after 50 years [if (AGE>50) then (AGE-50)^2 else 0] since this demonstrated a better Wald Chi-squared value as compared to other transformation types.
+|      **[A.2]** The <span style="color: #FF0000">CREAT</span> variable (numeric) was coded using its logarithm [log(CREAT)] since this demonstrated a better Wald Chi-squared value as compared to other transformation types.
+|      **[A.3]** The <span style="color: #FF0000">CEREBRAL</span> variable (numeric), <span style="color: #FF0000">CARDIAC</span> variable (numeric), <span style="color: #FF0000">AAA</span> variable (numeric) and <span style="color: #FF0000">PERIPH</span> variable (numeric) were coded using their linear combination [CEREBRAL + CARDIAC + (2*AAA) + PERIPH] since this demonstrated a better Wald Chi-squared value as compared to other transformation types.
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.3, warning=FALSE, message=FALSE}
+##################################
+# Loading dataset
+##################################
+PC <- SMART
+PC$EVENT <- as.numeric(PC$EVENT)
+
+##################################
+# Evaluating the impact of predictor coding
+# for AGE as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of AGE with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ AGE
+#################################
+AGE_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  AGE, data=PC)  
+anova(AGE_CoxPHFit_Linear)
+(AGE_CoxPHFit_Linear_WaldX2 <- anova(AGE_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of AGE with prognostic outcome = Squared
+# (TEVENT,EVENT) ~ AGE +AGE^2
+#################################
+AGE_CoxPHFit_Squared <- cph(Surv(TEVENT,EVENT) ~  pol(AGE,2), data=PC)  
+anova(AGE_CoxPHFit_Squared)
+(AGE_CoxPHFit_Squared_WaldX2 <- anova(AGE_CoxPHFit_Squared)[1])
+
+##################################
+# Relationship of AGE with prognostic outcome = Linear after 55
+# (TEVENT,EVENT) ~ if (AGE>55) then (AGE-55) else 0
+#################################
+AGE_CoxPHFit_LinearAfter55 <- cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>55, (AGE-55),0), data=PC)  
+anova(AGE_CoxPHFit_LinearAfter55)
+(AGE_CoxPHFit_LinearAfter55_WaldX2 <- anova(AGE_CoxPHFit_LinearAfter55)[1])
+
+##################################
+# Relationship of AGE with prognostic outcome = Squared after 50
+# (TEVENT,EVENT) ~ if (AGE>50) then (AGE-50)^2 else 0
+#################################
+AGE_CoxPHFit_SquaredAfter50 <- cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0), data=PC)  
+anova(AGE_CoxPHFit_SquaredAfter50)
+(AGE_CoxPHFit_SquaredAfter50_WaldX2 <- anova(AGE_CoxPHFit_SquaredAfter50)[1])
+
+##################################
+# Relationship of AGE with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(AGE,4)
+#################################
+AGE_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(AGE,4), data=PC)  
+anova(AGE_CoxPHFit_RCS4Knots)
+(AGE_CoxPHFit_RCS4Knots_WaldX2 <- anova(AGE_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of AGE with prognostic outcome = Quartiles
+# (TEVENT,EVENT) ~ AGE(Quartile1, Quartile2, Quartile3, Quartile4)
+#################################
+tapply(PC$AGE, ifelse(PC$AGE<50,1,
+                      ifelse(PC$AGE<60,2,
+                             ifelse(PC$AGE<70,3,4))),mean)
+PC$AGEQuartile  <- as.factor(ifelse(PC$AGE<50,43,
+                                    ifelse(PC$AGE<60,55,
+                                           ifelse(PC$AGE<70,65,74))))
+PC$AGEQuartile <- as.factor(PC$AGEQuartile)
+AGE_CoxPHFit_Quartile <- cph(Surv(TEVENT,EVENT) ~  AGEQuartile, data=PC) 
+anova(AGE_CoxPHFit_Quartile)
+(AGE_CoxPHFit_Quartile_WaldX2 <- anova(AGE_CoxPHFit_Quartile)[1])
+
+##################################
+# Relationship of AGE with prognostic outcome = Quartiles
+# (TEVENT,EVENT) ~ AGE(Half1, Half2)
+#################################
+tapply(PC$AGE, cut2(PC$AGE,g=2), mean)
+AGE_CoxPHFit_Dichotomized <- cph(Surv(TEVENT,EVENT) ~  ifelse(SMART$AGE<61,51,69), data=PC) 
+anova(AGE_CoxPHFit_Dichotomized)
+(AGE_CoxPHFit_Dichotomized_WaldX2 <- anova(AGE_CoxPHFit_Dichotomized)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for CREAT as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of CREAT with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ CREAT
+#################################
+CREAT_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  CREAT, data=PC)  
+anova(CREAT_CoxPHFit_Linear)
+(CREAT_CoxPHFit_Linear_WaldX2 <- anova(CREAT_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of CREAT with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(CREAT,4)
+#################################
+CREAT_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(CREAT,4), data=PC)  
+anova(CREAT_CoxPHFit_RCS4Knots)
+(CREAT_CoxPHFit_RCS4Knots_WaldX2 <- anova(CREAT_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of CREAT with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(CREAT,3)
+#################################
+CREAT_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(CREAT,3), data=PC)  
+anova(CREAT_CoxPHFit_RCS3Knots)
+(CREAT_CoxPHFit_RCS3Knots_WaldX2 <- anova(CREAT_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of CREAT with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(CREAT)
+#################################
+CREAT_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(CREAT), data=PC)  
+anova(CREAT_CoxPHFit_Log)
+(CREAT_CoxPHFit_Log_WaldX2 <- anova(CREAT_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for SYSTH as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of SYSTH with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ SYSTH
+#################################
+SYSTH_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  SYSTH, data=PC)  
+anova(SYSTH_CoxPHFit_Linear)
+(SYSTH_CoxPHFit_Linear_WaldX2 <- anova(SYSTH_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of SYSTH with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(SYSTH,4)
+#################################
+SYSTH_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(SYSTH,4), data=PC)  
+anova(SYSTH_CoxPHFit_RCS4Knots)
+(SYSTH_CoxPHFit_RCS4Knots_WaldX2 <- anova(SYSTH_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of SYSTH with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(SYSTH,3)
+#################################
+SYSTH_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(SYSTH,3), data=PC)  
+anova(SYSTH_CoxPHFit_RCS3Knots)
+(SYSTH_CoxPHFit_RCS3Knots_WaldX2 <- anova(SYSTH_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of SYSTH with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(SYSTH)
+#################################
+SYSTH_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(SYSTH), data=PC)  
+anova(SYSTH_CoxPHFit_Log)
+(SYSTH_CoxPHFit_Log_WaldX2 <- anova(SYSTH_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for DIASTH as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of DIASTH with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ DIASTH
+#################################
+DIASTH_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  DIASTH, data=PC)  
+anova(DIASTH_CoxPHFit_Linear)
+(DIASTH_CoxPHFit_Linear_WaldX2 <- anova(DIASTH_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of DIASTH with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(DIASTH,4)
+#################################
+DIASTH_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(DIASTH,4), data=PC)  
+anova(DIASTH_CoxPHFit_RCS4Knots)
+(DIASTH_CoxPHFit_RCS4Knots_WaldX2 <- anova(DIASTH_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of DIASTH with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(DIASTH,3)
+#################################
+DIASTH_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(DIASTH,3), data=PC)  
+anova(DIASTH_CoxPHFit_RCS3Knots)
+(DIASTH_CoxPHFit_RCS3Knots_WaldX2 <- anova(DIASTH_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of DIASTH with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(DIASTH)
+#################################
+DIASTH_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(DIASTH), data=PC)  
+anova(DIASTH_CoxPHFit_Log)
+(DIASTH_CoxPHFit_Log_WaldX2 <- anova(DIASTH_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for SYSTBP as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of SYSTBP with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ SYSTBP
+#################################
+SYSTBP_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  SYSTBP, data=PC)  
+anova(SYSTBP_CoxPHFit_Linear)
+(SYSTBP_CoxPHFit_Linear_WaldX2 <- anova(SYSTBP_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of SYSTBP with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(SYSTBP,4)
+#################################
+SYSTBP_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(SYSTBP,4), data=PC)  
+anova(SYSTBP_CoxPHFit_RCS4Knots)
+(SYSTBP_CoxPHFit_RCS4Knots_WaldX2 <- anova(SYSTBP_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of SYSTBP with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(SYSTBP,3)
+#################################
+SYSTBP_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(SYSTBP,3), data=PC)  
+anova(SYSTBP_CoxPHFit_RCS3Knots)
+(SYSTBP_CoxPHFit_RCS3Knots_WaldX2 <- anova(SYSTBP_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of SYSTBP with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(SYSTBP)
+#################################
+SYSTBP_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(SYSTBP), data=PC)  
+anova(SYSTBP_CoxPHFit_Log)
+(SYSTBP_CoxPHFit_Log_WaldX2 <- anova(SYSTBP_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for DIASTBP as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of DIASTBP with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ DIASTBP
+#################################
+DIASTBP_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  DIASTBP, data=PC)  
+anova(DIASTBP_CoxPHFit_Linear)
+(DIASTBP_CoxPHFit_Linear_WaldX2 <- anova(DIASTBP_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of DIASTBP with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(DIASTBP,4)
+#################################
+DIASTBP_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(DIASTBP,4), data=PC)  
+anova(DIASTBP_CoxPHFit_RCS4Knots)
+(DIASTBP_CoxPHFit_RCS4Knots_WaldX2 <- anova(DIASTBP_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of DIASTBP with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(DIASTBP,3)
+#################################
+DIASTBP_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(DIASTBP,3), data=PC)  
+anova(DIASTBP_CoxPHFit_RCS3Knots)
+(DIASTBP_CoxPHFit_RCS3Knots_WaldX2 <- anova(DIASTBP_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of DIASTBP with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(DIASTBP)
+#################################
+DIASTBP_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(DIASTBP), data=PC)  
+anova(DIASTBP_CoxPHFit_Log)
+(DIASTBP_CoxPHFit_Log_WaldX2 <- anova(DIASTBP_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for CHOL as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of CHOL with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ CHOL
+#################################
+CHOL_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  CHOL, data=PC)  
+anova(CHOL_CoxPHFit_Linear)
+(CHOL_CoxPHFit_Linear_WaldX2 <- anova(CHOL_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of CHOL with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(CHOL,4)
+#################################
+CHOL_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(CHOL,4), data=PC)  
+anova(CHOL_CoxPHFit_RCS4Knots)
+(CHOL_CoxPHFit_RCS4Knots_WaldX2 <- anova(CHOL_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of CHOL with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(CHOL,3)
+#################################
+CHOL_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(CHOL,3), data=PC)  
+anova(CHOL_CoxPHFit_RCS3Knots)
+(CHOL_CoxPHFit_RCS3Knots_WaldX2 <- anova(CHOL_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of CHOL with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(CHOL)
+#################################
+CHOL_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(CHOL), data=PC)  
+anova(CHOL_CoxPHFit_Log)
+(CHOL_CoxPHFit_Log_WaldX2 <- anova(CHOL_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for HDL as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of HDL with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ HDL
+#################################
+HDL_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  HDL, data=PC)  
+anova(HDL_CoxPHFit_Linear)
+(HDL_CoxPHFit_Linear_WaldX2 <- anova(HDL_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of HDL with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(HDL,4)
+#################################
+HDL_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(HDL,4), data=PC)  
+anova(HDL_CoxPHFit_RCS4Knots)
+(HDL_CoxPHFit_RCS4Knots_WaldX2 <- anova(HDL_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of HDL with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(HDL,3)
+#################################
+HDL_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(HDL,3), data=PC)  
+anova(HDL_CoxPHFit_RCS3Knots)
+(HDL_CoxPHFit_RCS3Knots_WaldX2 <- anova(HDL_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of HDL with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(HDL)
+#################################
+HDL_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(HDL), data=PC)  
+anova(HDL_CoxPHFit_Log)
+(HDL_CoxPHFit_Log_WaldX2 <- anova(HDL_CoxPHFit_Log)[1])
+
+
+##################################
+# Evaluating the impact of predictor coding
+# for LDL as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of LDL with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ LDL
+#################################
+LDL_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  LDL, data=PC)  
+anova(LDL_CoxPHFit_Linear)
+(LDL_CoxPHFit_Linear_WaldX2 <- anova(LDL_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of LDL with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(LDL,4)
+#################################
+LDL_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(LDL,4), data=PC)  
+anova(LDL_CoxPHFit_RCS4Knots)
+(LDL_CoxPHFit_RCS4Knots_WaldX2 <- anova(LDL_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of LDL with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(LDL,3)
+#################################
+LDL_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(LDL,3), data=PC)  
+anova(LDL_CoxPHFit_RCS3Knots)
+(LDL_CoxPHFit_RCS3Knots_WaldX2 <- anova(LDL_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of LDL with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(LDL)
+#################################
+LDL_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(LDL), data=PC)  
+anova(LDL_CoxPHFit_Log)
+(LDL_CoxPHFit_Log_WaldX2 <- anova(LDL_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for TRIG as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of TRIG with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ TRIG
+#################################
+TRIG_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  TRIG, data=PC)  
+anova(TRIG_CoxPHFit_Linear)
+(TRIG_CoxPHFit_Linear_WaldX2 <- anova(TRIG_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of TRIG with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(TRIG,4)
+#################################
+TRIG_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(TRIG,4), data=PC)  
+anova(TRIG_CoxPHFit_RCS4Knots)
+(TRIG_CoxPHFit_RCS4Knots_WaldX2 <- anova(TRIG_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of TRIG with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(TRIG,3)
+#################################
+TRIG_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(TRIG,3), data=PC)  
+anova(TRIG_CoxPHFit_RCS3Knots)
+(TRIG_CoxPHFit_RCS3Knots_WaldX2 <- anova(TRIG_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of TRIG with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(TRIG)
+#################################
+TRIG_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(TRIG), data=PC)  
+anova(TRIG_CoxPHFit_Log)
+(TRIG_CoxPHFit_Log_WaldX2 <- anova(TRIG_CoxPHFit_Log)[1])
+
+
+##################################
+# Evaluating the impact of predictor coding
+# for HOMOC as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of HOMOC with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ HOMOC
+#################################
+HOMOC_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  HOMOC, data=PC)  
+anova(HOMOC_CoxPHFit_Linear)
+(HOMOC_CoxPHFit_Linear_WaldX2 <- anova(HOMOC_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of HOMOC with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(HOMOC,4)
+#################################
+HOMOC_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(HOMOC,4), data=PC)  
+anova(HOMOC_CoxPHFit_RCS4Knots)
+(HOMOC_CoxPHFit_RCS4Knots_WaldX2 <- anova(HOMOC_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of HOMOC with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(HOMOC,3)
+#################################
+HOMOC_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(HOMOC,3), data=PC)  
+anova(HOMOC_CoxPHFit_RCS3Knots)
+(HOMOC_CoxPHFit_RCS3Knots_WaldX2 <- anova(HOMOC_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of HOMOC with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(HOMOC)
+#################################
+HOMOC_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(HOMOC), data=PC)  
+anova(HOMOC_CoxPHFit_Log)
+(HOMOC_CoxPHFit_Log_WaldX2 <- anova(HOMOC_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for GLUT as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of GLUT with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ GLUT
+#################################
+GLUT_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  GLUT, data=PC)  
+anova(GLUT_CoxPHFit_Linear)
+(GLUT_CoxPHFit_Linear_WaldX2 <- anova(GLUT_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of GLUT with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(GLUT,4)
+#################################
+GLUT_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(GLUT,4), data=PC)  
+anova(GLUT_CoxPHFit_RCS4Knots)
+(GLUT_CoxPHFit_RCS4Knots_WaldX2 <- anova(GLUT_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of GLUT with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(GLUT,3)
+#################################
+GLUT_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(GLUT,3), data=PC)  
+anova(GLUT_CoxPHFit_RCS3Knots)
+(GLUT_CoxPHFit_RCS3Knots_WaldX2 <- anova(GLUT_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of GLUT with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(GLUT)
+#################################
+GLUT_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(GLUT), data=PC)  
+anova(GLUT_CoxPHFit_Log)
+(GLUT_CoxPHFit_Log_WaldX2 <- anova(GLUT_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for LENGTH as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of LENGTH with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ LENGTH
+#################################
+LENGTH_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  LENGTH, data=PC)  
+anova(LENGTH_CoxPHFit_Linear)
+(LENGTH_CoxPHFit_Linear_WaldX2 <- anova(LENGTH_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of LENGTH with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(LENGTH,4)
+#################################
+LENGTH_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(LENGTH,4), data=PC)  
+anova(LENGTH_CoxPHFit_RCS4Knots)
+(LENGTH_CoxPHFit_RCS4Knots_WaldX2 <- anova(LENGTH_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of LENGTH with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(LENGTH,3)
+#################################
+LENGTH_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(LENGTH,3), data=PC)  
+anova(LENGTH_CoxPHFit_RCS3Knots)
+(LENGTH_CoxPHFit_RCS3Knots_WaldX2 <- anova(LENGTH_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of LENGTH with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(LENGTH)
+#################################
+LENGTH_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(LENGTH), data=PC)  
+anova(LENGTH_CoxPHFit_Log)
+(LENGTH_CoxPHFit_Log_WaldX2 <- anova(LENGTH_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for WEIGHT as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of WEIGHT with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ WEIGHT
+#################################
+WEIGHT_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  WEIGHT, data=PC)  
+anova(WEIGHT_CoxPHFit_Linear)
+(WEIGHT_CoxPHFit_Linear_WaldX2 <- anova(WEIGHT_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of WEIGHT with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(WEIGHT,4)
+#################################
+WEIGHT_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(WEIGHT,4), data=PC)  
+anova(WEIGHT_CoxPHFit_RCS4Knots)
+(WEIGHT_CoxPHFit_RCS4Knots_WaldX2 <- anova(WEIGHT_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of WEIGHT with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(WEIGHT,3)
+#################################
+WEIGHT_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(WEIGHT,3), data=PC)  
+anova(WEIGHT_CoxPHFit_RCS3Knots)
+(WEIGHT_CoxPHFit_RCS3Knots_WaldX2 <- anova(WEIGHT_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of WEIGHT with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(WEIGHT)
+#################################
+WEIGHT_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(WEIGHT), data=PC)  
+anova(WEIGHT_CoxPHFit_Log)
+(WEIGHT_CoxPHFit_Log_WaldX2 <- anova(WEIGHT_CoxPHFit_Log)[1])
+
+
+##################################
+# Evaluating the impact of predictor coding
+# for BMI as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of BMI with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ BMI
+#################################
+BMI_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  BMI, data=PC)  
+anova(BMI_CoxPHFit_Linear)
+(BMI_CoxPHFit_Linear_WaldX2 <- anova(BMI_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of BMI with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(BMI,4)
+#################################
+BMI_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(BMI,4), data=PC)  
+anova(BMI_CoxPHFit_RCS4Knots)
+(BMI_CoxPHFit_RCS4Knots_WaldX2 <- anova(BMI_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of BMI with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(BMI,3)
+#################################
+BMI_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(BMI,3), data=PC)  
+anova(BMI_CoxPHFit_RCS3Knots)
+(BMI_CoxPHFit_RCS3Knots_WaldX2 <- anova(BMI_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Relationship of BMI with prognostic outcome = Logarithm
+# (TEVENT,EVENT) ~ Logarithm(BMI)
+#################################
+BMI_CoxPHFit_Log <- cph(Surv(TEVENT,EVENT) ~  log(BMI), data=PC)  
+anova(BMI_CoxPHFit_Log)
+(BMI_CoxPHFit_Log_WaldX2 <- anova(BMI_CoxPHFit_Log)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for PACKYRS as applied in a univariate Cox regression model
+#################################
+
+##################################
+# Relationship of PACKYRS with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ PACKYRS
+#################################
+PACKYRS_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  packyrs, data=PC)  
+anova(PACKYRS_CoxPHFit_Linear)
+(PACKYRS_CoxPHFit_Linear_WaldX2 <- anova(PACKYRS_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of PACKYRS with prognostic outcome = Restricted cubic spline (4 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(PACKYRS,4)
+#################################
+PACKYRS_CoxPHFit_RCS4Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(packyrs,4), data=PC)  
+anova(PACKYRS_CoxPHFit_RCS4Knots)
+(PACKYRS_CoxPHFit_RCS4Knots_WaldX2 <- anova(PACKYRS_CoxPHFit_RCS4Knots)[1])
+
+##################################
+# Relationship of PACKYRS with prognostic outcome = Restricted cubic spline (3 knots)
+# (TEVENT,EVENT) ~ Restricted Cubic Spline(PACKYRS,3)
+#################################
+PACKYRS_CoxPHFit_RCS3Knots <- cph(Surv(TEVENT,EVENT) ~  rcs(packyrs,3), data=PC)  
+anova(PACKYRS_CoxPHFit_RCS3Knots)
+(PACKYRS_CoxPHFit_RCS3Knots_WaldX2 <- anova(PACKYRS_CoxPHFit_RCS3Knots)[1])
+
+##################################
+# Evaluating the impact of predictor coding
+# for CEREBRAL, CARDIAC, AAA and PERIPH
+# as applied in a univariate and multivariate Cox regression model
+#################################
+PC$CEREBRAL  <- as.numeric(as.character(PC$CEREBRAL))
+PC$CARDIAC   <- as.numeric(as.character(PC$CARDIAC))
+PC$AAA       <- as.numeric(as.character(PC$AAA))
+PC$PERIPH    <- as.numeric(as.character(PC$PERIPH))
+
+##################################
+# Relationship of CEREBRAL, CARDIAC, AAA and PERIPH
+# with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ CEREBRAL + CARDIAC + AAA + PERIPH
+#################################
+COMBINED_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  CEREBRAL + CARDIAC + AAA + PERIPH, data=PC) 
+anova(COMBINED_CoxPHFit_Linear)
+(CEREBRAL_CoxPHFit_Linear_WaldX2 <- anova(COMBINED_CoxPHFit_Linear)[1])
+(CARDIAC_CoxPHFit_Linear_WaldX2 <- anova(COMBINED_CoxPHFit_Linear)[2])
+(AAA_CoxPHFit_Linear_WaldX2 <- anova(COMBINED_CoxPHFit_Linear)[3])
+(PERIPH_CoxPHFit_Linear_WaldX2 <- anova(COMBINED_CoxPHFit_Linear)[4])
+(COMBINED_CoxPHFit_Linear_WaldX2 <- anova(COMBINED_CoxPHFit_Linear)[5])
+
+##################################
+# Relationship of (CEREBRAL + CARDIAC + AAA + PERIPH)
+# with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ (CEREBRAL + CARDIAC + AAA + PERIPH)
+#################################
+PC$SUMSCORE_4LEVELS  <- PC$CEREBRAL + PC$CARDIAC + PC$AAA + PC$PERIPH
+SUMSCORE_4LEVELS_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  SUMSCORE_4LEVELS, data=PC) 
+(SUMSCORE_4LEVELS_CoxPHFit_Linear_WaldX2 <- anova(SUMSCORE_4LEVELS_CoxPHFit_Linear)[1])
+
+##################################
+# Relationship of (CEREBRAL + CARDIAC + 2*AAA + PERIPH)
+# with prognostic outcome = Linear
+# (TEVENT,EVENT) ~ (CEREBRAL + CARDIAC + 2*AAA + PERIPH)
+#################################
+PC$SUMSCORE_5LEVELS  <- PC$CEREBRAL + PC$CARDIAC + (2*PC$AAA) + PC$PERIPH
+SUMSCORE_5LEVELS_CoxPHFit_Linear <- cph(Surv(TEVENT,EVENT) ~  SUMSCORE_5LEVELS, data=PC) 
+(SUMSCORE_5LEVELS_CoxPHFit_Linear_WaldX2 <- anova(SUMSCORE_5LEVELS_CoxPHFit_Linear)[1])
+
+##################################
+# Consolidating all results
+# of predictor coding evaluation
+#################################
+PredictorInformation <- c(rep("AGE",7),
+                          rep("CREAT",4),
+                          rep("SYSTH",4),
+                          rep("DIASTH",4),
+                          rep("SYSTBP",4),
+                          rep("DIASTBP",4),
+                          rep("CHOL",4),
+                          rep("HDL",4),
+                          rep("LDL",4),
+                          rep("TRIG",4),
+                          rep("HOMOC",4),
+                          rep("GLUT",4),
+                          rep("LENGTH",4),
+                          rep("WEIGHT",4),
+                          rep("BMI",4),
+                          rep("PACKYRS",3),
+                          rep("A-CEREBRAL",1),
+                          rep("B-CARDIAC",1),
+                          rep("C-AAA",1),
+                          rep("D-PERIPH",1),
+                          rep("(A,B,C,D)",1),
+                          rep("(A+B+C+D)",1),
+                          rep("[A+B+(2*C)+D]",1))
+CodingInformation <- c("Linear",
+                       "Squared",
+                       "Linear Effect After 55",
+                       "Squared Effect After 50",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Quartiles",
+                       "Dichotomized",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Logarithm",
+                       "Linear",
+                       "Restricted Cubic Spline (4 knots)",
+                       "Restricted Cubic Spline (3 knots)",
+                       "Linear",
+                       "Linear",
+                       "Linear",
+                       "Linear",
+                       "Linear",
+                       "Linear",
+                       "Linear")
+WaldX2Information <- c(AGE_CoxPHFit_Linear_WaldX2,
+                       AGE_CoxPHFit_Squared_WaldX2,
+                       AGE_CoxPHFit_LinearAfter55_WaldX2,
+                       AGE_CoxPHFit_SquaredAfter50_WaldX2,
+                       AGE_CoxPHFit_RCS4Knots_WaldX2,
+                       AGE_CoxPHFit_Quartile_WaldX2,
+                       AGE_CoxPHFit_Dichotomized_WaldX2,
+                       CREAT_CoxPHFit_Linear_WaldX2,
+                       CREAT_CoxPHFit_RCS4Knots_WaldX2,
+                       CREAT_CoxPHFit_RCS3Knots_WaldX2,
+                       CREAT_CoxPHFit_Log_WaldX2,
+                       SYSTH_CoxPHFit_Linear_WaldX2,
+                       SYSTH_CoxPHFit_RCS4Knots_WaldX2,
+                       SYSTH_CoxPHFit_RCS3Knots_WaldX2,
+                       SYSTH_CoxPHFit_Log_WaldX2,
+                       DIASTH_CoxPHFit_Linear_WaldX2,
+                       DIASTH_CoxPHFit_RCS4Knots_WaldX2,
+                       DIASTH_CoxPHFit_RCS3Knots_WaldX2,
+                       DIASTH_CoxPHFit_Log_WaldX2,
+                       SYSTBP_CoxPHFit_Linear_WaldX2,
+                       SYSTBP_CoxPHFit_RCS4Knots_WaldX2,
+                       SYSTBP_CoxPHFit_RCS3Knots_WaldX2,
+                       SYSTBP_CoxPHFit_Log_WaldX2,
+                       DIASTBP_CoxPHFit_Linear_WaldX2,
+                       DIASTBP_CoxPHFit_RCS4Knots_WaldX2,
+                       DIASTBP_CoxPHFit_RCS3Knots_WaldX2,
+                       DIASTBP_CoxPHFit_Log_WaldX2,
+                       CHOL_CoxPHFit_Linear_WaldX2,
+                       CHOL_CoxPHFit_RCS4Knots_WaldX2,
+                       CHOL_CoxPHFit_RCS3Knots_WaldX2,
+                       CHOL_CoxPHFit_Log_WaldX2,
+                       HDL_CoxPHFit_Linear_WaldX2,
+                       HDL_CoxPHFit_RCS4Knots_WaldX2,
+                       HDL_CoxPHFit_RCS3Knots_WaldX2,
+                       HDL_CoxPHFit_Log_WaldX2,
+                       LDL_CoxPHFit_Linear_WaldX2,
+                       LDL_CoxPHFit_RCS4Knots_WaldX2,
+                       LDL_CoxPHFit_RCS3Knots_WaldX2,
+                       LDL_CoxPHFit_Log_WaldX2,
+                       TRIG_CoxPHFit_Linear_WaldX2,
+                       TRIG_CoxPHFit_RCS4Knots_WaldX2,
+                       TRIG_CoxPHFit_RCS3Knots_WaldX2,
+                       TRIG_CoxPHFit_Log_WaldX2,
+                       HOMOC_CoxPHFit_Linear_WaldX2,
+                       HOMOC_CoxPHFit_RCS4Knots_WaldX2,
+                       HOMOC_CoxPHFit_RCS3Knots_WaldX2,
+                       HOMOC_CoxPHFit_Log_WaldX2,
+                       GLUT_CoxPHFit_Linear_WaldX2,
+                       GLUT_CoxPHFit_RCS4Knots_WaldX2,
+                       GLUT_CoxPHFit_RCS3Knots_WaldX2,
+                       GLUT_CoxPHFit_Log_WaldX2,
+                       LENGTH_CoxPHFit_Linear_WaldX2,
+                       LENGTH_CoxPHFit_RCS4Knots_WaldX2,
+                       LENGTH_CoxPHFit_RCS3Knots_WaldX2,
+                       LENGTH_CoxPHFit_Log_WaldX2,
+                       WEIGHT_CoxPHFit_Linear_WaldX2,
+                       WEIGHT_CoxPHFit_RCS4Knots_WaldX2,
+                       WEIGHT_CoxPHFit_RCS3Knots_WaldX2,
+                       WEIGHT_CoxPHFit_Log_WaldX2,
+                       BMI_CoxPHFit_Linear_WaldX2,
+                       BMI_CoxPHFit_RCS4Knots_WaldX2,
+                       BMI_CoxPHFit_RCS3Knots_WaldX2,
+                       BMI_CoxPHFit_Log_WaldX2,
+                       PACKYRS_CoxPHFit_Linear_WaldX2,
+                       PACKYRS_CoxPHFit_RCS4Knots_WaldX2,
+                       PACKYRS_CoxPHFit_RCS3Knots_WaldX2,
+                       CEREBRAL_CoxPHFit_Linear_WaldX2,
+                       CARDIAC_CoxPHFit_Linear_WaldX2,
+                       AAA_CoxPHFit_Linear_WaldX2,
+                       PERIPH_CoxPHFit_Linear_WaldX2,
+                       COMBINED_CoxPHFit_Linear_WaldX2,
+                       SUMSCORE_4LEVELS_CoxPHFit_Linear_WaldX2,
+                       SUMSCORE_5LEVELS_CoxPHFit_Linear_WaldX2)
+
+PredictorCodingSummary <- as.data.frame(cbind(PredictorInformation,
+                                CodingInformation,
+                                WaldX2Information))
+
+PredictorCodingSummary$WaldX2Information <- round(as.numeric(as.character(PredictorCodingSummary$WaldX2Information)),2)
+
+colnames(PredictorCodingSummary)<- c("Predictor",
+                                     "Coding",
+                                     "Wald Chi-Squared")
+
+##################################
+# Summarizing all results
+# of predictor coding evaluation
+#################################
+(PredictorCodingSummary)
+
+```
+
+</details>
+
+### 1.2.4 Data Preprocessing
+|
+| Missing data pattern assessment:
+|
+| **[A]** The missing data patterns were summarized using the <span style="color: #0000FF">aggr</span> method from the <mark style="background-color: #CCECFF">**VIM**</mark> package and the <span style="color: #0000FF">naclus</span> method from the <mark style="background-color: #CCECFF">**Hmisc**</mark> package.
+|      **[A.1]** There were 924/3873 (0.236) observations assessed as complete.
+|      **[A.2]** The <span style="color: #FF0000">DIASTH</span> variable (numeric), <span style="color: #FF0000">SYSTH</span> variable (numeric), <span style="color: #FF0000">SYSTBP</span> variable (numeric) and <span style="color: #FF0000">DIASTBP</span> variable (numeric) contributed the most missing data.
+|      **[A.3]** There were 105 missing data patterns observed employing various combinations of the 21 variables. The most prevalent pattern consists of two variables with missing data as noted from 1975/3873 (0.510) observations. 
+|      **[A.4]** The missing data patterns were predominantly clustered between the following variables:
+|             **[A.4.1]** <span style="color: #FF0000">DIASTH</span> (numeric) and <span style="color: #FF0000">SYSTH</span> (numeric) variables.
+|             **[A.4.2]** <span style="color: #FF0000">DIASTBP</span> (numeric) and <span style="color: #FF0000">SYSTBP</span> (numeric) variables.
+|
+| Missing data imputation method implementation and plausibility evaluation:
+|
+| **[A]** The missing data imputation method <span style="color: #0000FF">aregImpute</span> (multiple imputation using additive regression, bootstrapping, and predictive mean matching) from the <mark style="background-color: #CCECFF">**Hmisc**</mark> package was applied using 5 iterations. The imputed values for each iteration were collectively compared to the original data by individual variable and showed: 
+|      **[A.1]** Relatively good data plausibility for the numeric variables in the imputed dataset as compared to the original dataset for all 5 iterations.
+|      **[A.2]** Relatively good data plausibility for the categorical variables in the imputed dataset as compared to the original dataset for all 5 iterations.
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+
+```{r section_1.2.4, warning=FALSE, message=FALSE, fig.width=15, fig.height=15}
+##################################
+# Loading dataset
+##################################
+DPP <- SMART
+
+##################################
+# Exploring the missing data patterns
+##################################
+DPP.Profile <- aggr(DPP, 
+                   plot = FALSE)
+
+DPP.Profile.Summary <- summary(DPP.Profile)
+
+nrow(DPP.Profile.Summary)
+
+plot(DPP.Profile, 
+     numbers = TRUE, 
+     prop = TRUE,
+     sortVars = TRUE,
+     col=c("green","red"))
+
+par(mfrow=c(1,1))
+DPP.Patterns <- naclus(DPP)
+plot(DPP.Patterns, 
+     ylab="Fraction of NAs in common",
+     col="red")
+
+par(mfrow=c(1,2))
+naplot(DPP.Patterns, which=c('na per var'),col="red")
+naplot(DPP.Patterns, which=c('na per obs'),col="red")
+
+##################################
+# Conducting missing data imputation
+# using AREGIMPUTE
+# (Multiple Imputation using Additive Regression, Bootstrapping, and Predictive Mean Matching)
+##################################
+DPP$CEREBRAL  <- as.numeric(as.character(DPP$CEREBRAL))
+DPP$CARDIAC   <- as.numeric(as.character(DPP$CARDIAC))
+DPP$AAA       <- as.numeric(as.character(DPP$AAA))
+DPP$PERIPH    <- as.numeric(as.character(DPP$PERIPH))
+DPP$SUMSCORE_5LEVELS  <- DPP$CEREBRAL + 
+  DPP$CARDIAC + 
+  (2*DPP$AAA) + 
+  DPP$PERIPH
+
+set.seed(123456789)
+DPP.AREGIMPUTED  <-aregImpute(~I(TEVENT)+EVENT+SEX+I(AGE)+
+                       SYSTBP+DIASTBP+SYSTH+DIASTH+
+                       DIABETES+CEREBRAL+CARDIAC+AAA+PERIPH+I(SUMSCORE_5LEVELS)+STENOSIS+
+                       I(LENGTH)+I(WEIGHT)+I(BMI)+
+                       I(CHOL)+I(HDL)+I(LDL)+I(TRIG)+I(HOMOC)+I(GLUT)+I(CREAT)+I(IMT)+
+                       as.factor(albumin) +as.factor(SMOKING) + I(packyrs) + as.factor(alcohol), 
+                     n.impute=5,data=DPP)
+
+##################################
+# Evaluating the plausibility of the
+# AREG-imputed values for the
+# numerical variables
+##################################
+
+SYSTBP_complete <- (DPP$SYSTBP[complete.cases(DPP$SYSTBP)])
+
+DPP.AREGIMPUTED_aregImpute_SYSTBP <- as.data.frame(DPP.AREGIMPUTED$imputed$SYSTBP)
+
+SYSTBP_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_SYSTBP$V1
+SYSTBP_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_SYSTBP$V2
+SYSTBP_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_SYSTBP$V3
+SYSTBP_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_SYSTBP$V4
+SYSTBP_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_SYSTBP$V5
+
+SYSTBP_values <- c(SYSTBP_complete,
+                       SYSTBP_aregImpute_1,
+                       SYSTBP_aregImpute_2,
+                       SYSTBP_aregImpute_3,
+                       SYSTBP_aregImpute_4,
+                       SYSTBP_aregImpute_5)
+
+SYSTBP_labels <- c(rep("Original",length(SYSTBP_complete)),
+            rep("aregImputed_1",length(SYSTBP_aregImpute_1)),
+            rep("aregImputed_2",length(SYSTBP_aregImpute_2)),
+            rep("aregImputed_3",length(SYSTBP_aregImpute_3)),
+            rep("aregImputed_4",length(SYSTBP_aregImpute_4)),
+            rep("aregImputed_5",length(SYSTBP_aregImpute_5)))
+
+DIASTBP_complete <- (DPP$DIASTBP[complete.cases(DPP$DIASTBP)])
+
+DPP.AREGIMPUTED_aregImpute_DIASTBP <- as.data.frame(DPP.AREGIMPUTED$imputed$DIASTBP)
+
+DIASTBP_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_DIASTBP$V1
+DIASTBP_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_DIASTBP$V2
+DIASTBP_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_DIASTBP$V3
+DIASTBP_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_DIASTBP$V4
+DIASTBP_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_DIASTBP$V5
+
+DIASTBP_values <- c(DIASTBP_complete,
+                    DIASTBP_aregImpute_1,
+                    DIASTBP_aregImpute_2,
+                    DIASTBP_aregImpute_3,
+                    DIASTBP_aregImpute_4,
+                    DIASTBP_aregImpute_5)
+
+DIASTBP_labels <- c(rep("Original",length(DIASTBP_complete)),
+                    rep("aregImputed_1",length(DIASTBP_aregImpute_1)),
+                    rep("aregImputed_2",length(DIASTBP_aregImpute_2)),
+                    rep("aregImputed_3",length(DIASTBP_aregImpute_3)),
+                    rep("aregImputed_4",length(DIASTBP_aregImpute_4)),
+                    rep("aregImputed_5",length(DIASTBP_aregImpute_5)))
+
+SYSTH_complete <- (DPP$SYSTH[complete.cases(DPP$SYSTH)])
+
+DPP.AREGIMPUTED_aregImpute_SYSTH <- as.data.frame(DPP.AREGIMPUTED$imputed$SYSTH)
+
+SYSTH_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_SYSTH$V1
+SYSTH_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_SYSTH$V2
+SYSTH_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_SYSTH$V3
+SYSTH_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_SYSTH$V4
+SYSTH_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_SYSTH$V5
+
+SYSTH_values <- c(SYSTH_complete,
+                  SYSTH_aregImpute_1,
+                  SYSTH_aregImpute_2,
+                  SYSTH_aregImpute_3,
+                  SYSTH_aregImpute_4,
+                  SYSTH_aregImpute_5)
+
+SYSTH_labels <- c(rep("Original",length(SYSTH_complete)),
+                  rep("aregImputed_1",length(SYSTH_aregImpute_1)),
+                  rep("aregImputed_2",length(SYSTH_aregImpute_2)),
+                  rep("aregImputed_3",length(SYSTH_aregImpute_3)),
+                  rep("aregImputed_4",length(SYSTH_aregImpute_4)),
+                  rep("aregImputed_5",length(SYSTH_aregImpute_5)))
+
+DIASTH_complete <- (DPP$DIASTH[complete.cases(DPP$DIASTH)])
+
+DPP.AREGIMPUTED_aregImpute_DIASTH <- as.data.frame(DPP.AREGIMPUTED$imputed$DIASTH)
+
+DIASTH_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_DIASTH$V1
+DIASTH_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_DIASTH$V2
+DIASTH_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_DIASTH$V3
+DIASTH_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_DIASTH$V4
+DIASTH_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_DIASTH$V5
+
+DIASTH_values <- c(DIASTH_complete,
+                   DIASTH_aregImpute_1,
+                   DIASTH_aregImpute_2,
+                   DIASTH_aregImpute_3,
+                   DIASTH_aregImpute_4,
+                   DIASTH_aregImpute_5)
+
+DIASTH_labels <- c(rep("Original",length(DIASTH_complete)),
+                   rep("aregImputed_1",length(DIASTH_aregImpute_1)),
+                   rep("aregImputed_2",length(DIASTH_aregImpute_2)),
+                   rep("aregImputed_3",length(DIASTH_aregImpute_3)),
+                   rep("aregImputed_4",length(DIASTH_aregImpute_4)),
+                   rep("aregImputed_5",length(DIASTH_aregImpute_5)))
+
+LENGTH_complete <- (DPP$LENGTH[complete.cases(DPP$LENGTH)])
+
+DPP.AREGIMPUTED_aregImpute_LENGTH <- as.data.frame(DPP.AREGIMPUTED$imputed$LENGTH)
+
+LENGTH_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_LENGTH$V1
+LENGTH_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_LENGTH$V2
+LENGTH_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_LENGTH$V3
+LENGTH_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_LENGTH$V4
+LENGTH_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_LENGTH$V5
+
+LENGTH_values <- c(LENGTH_complete,
+                   LENGTH_aregImpute_1,
+                   LENGTH_aregImpute_2,
+                   LENGTH_aregImpute_3,
+                   LENGTH_aregImpute_4,
+                   LENGTH_aregImpute_5)
+
+LENGTH_labels <- c(rep("Original",length(LENGTH_complete)),
+                   rep("aregImputed_1",length(LENGTH_aregImpute_1)),
+                   rep("aregImputed_2",length(LENGTH_aregImpute_2)),
+                   rep("aregImputed_3",length(LENGTH_aregImpute_3)),
+                   rep("aregImputed_4",length(LENGTH_aregImpute_4)),
+                   rep("aregImputed_5",length(LENGTH_aregImpute_5)))
+
+WEIGHT_complete <- (DPP$WEIGHT[complete.cases(DPP$WEIGHT)])
+
+DPP.AREGIMPUTED_aregImpute_WEIGHT <- as.data.frame(DPP.AREGIMPUTED$imputed$WEIGHT)
+
+WEIGHT_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_WEIGHT$V1
+WEIGHT_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_WEIGHT$V2
+WEIGHT_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_WEIGHT$V3
+WEIGHT_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_WEIGHT$V4
+WEIGHT_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_WEIGHT$V5
+
+WEIGHT_values <- c(WEIGHT_complete,
+                   WEIGHT_aregImpute_1,
+                   WEIGHT_aregImpute_2,
+                   WEIGHT_aregImpute_3,
+                   WEIGHT_aregImpute_4,
+                   WEIGHT_aregImpute_5)
+
+WEIGHT_labels <- c(rep("Original",length(WEIGHT_complete)),
+                   rep("aregImputed_1",length(WEIGHT_aregImpute_1)),
+                   rep("aregImputed_2",length(WEIGHT_aregImpute_2)),
+                   rep("aregImputed_3",length(WEIGHT_aregImpute_3)),
+                   rep("aregImputed_4",length(WEIGHT_aregImpute_4)),
+                   rep("aregImputed_5",length(WEIGHT_aregImpute_5)))
+
+
+BMI_complete <- (DPP$BMI[complete.cases(DPP$BMI)])
+
+DPP.AREGIMPUTED_aregImpute_BMI <- as.data.frame(DPP.AREGIMPUTED$imputed$BMI)
+
+BMI_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_BMI$V1
+BMI_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_BMI$V2
+BMI_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_BMI$V3
+BMI_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_BMI$V4
+BMI_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_BMI$V5
+
+BMI_values <- c(BMI_complete,
+                   BMI_aregImpute_1,
+                   BMI_aregImpute_2,
+                   BMI_aregImpute_3,
+                   BMI_aregImpute_4,
+                   BMI_aregImpute_5)
+
+BMI_labels <- c(rep("Original",length(BMI_complete)),
+                   rep("aregImputed_1",length(BMI_aregImpute_1)),
+                   rep("aregImputed_2",length(BMI_aregImpute_2)),
+                   rep("aregImputed_3",length(BMI_aregImpute_3)),
+                   rep("aregImputed_4",length(BMI_aregImpute_4)),
+                   rep("aregImputed_5",length(BMI_aregImpute_5)))
+
+
+CHOL_complete <- (DPP$CHOL[complete.cases(DPP$CHOL)])
+
+DPP.AREGIMPUTED_aregImpute_CHOL <- as.data.frame(DPP.AREGIMPUTED$imputed$CHOL)
+
+CHOL_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_CHOL$V1
+CHOL_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_CHOL$V2
+CHOL_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_CHOL$V3
+CHOL_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_CHOL$V4
+CHOL_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_CHOL$V5
+
+CHOL_values <- c(CHOL_complete,
+                   CHOL_aregImpute_1,
+                   CHOL_aregImpute_2,
+                   CHOL_aregImpute_3,
+                   CHOL_aregImpute_4,
+                   CHOL_aregImpute_5)
+
+CHOL_labels <- c(rep("Original",length(CHOL_complete)),
+                   rep("aregImputed_1",length(CHOL_aregImpute_1)),
+                   rep("aregImputed_2",length(CHOL_aregImpute_2)),
+                   rep("aregImputed_3",length(CHOL_aregImpute_3)),
+                   rep("aregImputed_4",length(CHOL_aregImpute_4)),
+                   rep("aregImputed_5",length(CHOL_aregImpute_5)))
+
+HDL_complete <- (DPP$HDL[complete.cases(DPP$HDL)])
+
+DPP.AREGIMPUTED_aregImpute_HDL <- as.data.frame(DPP.AREGIMPUTED$imputed$HDL)
+
+HDL_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_HDL$V1
+HDL_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_HDL$V2
+HDL_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_HDL$V3
+HDL_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_HDL$V4
+HDL_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_HDL$V5
+
+HDL_values <- c(HDL_complete,
+                   HDL_aregImpute_1,
+                   HDL_aregImpute_2,
+                   HDL_aregImpute_3,
+                   HDL_aregImpute_4,
+                   HDL_aregImpute_5)
+
+HDL_labels <- c(rep("Original",length(HDL_complete)),
+                   rep("aregImputed_1",length(HDL_aregImpute_1)),
+                   rep("aregImputed_2",length(HDL_aregImpute_2)),
+                   rep("aregImputed_3",length(HDL_aregImpute_3)),
+                   rep("aregImputed_4",length(HDL_aregImpute_4)),
+                   rep("aregImputed_5",length(HDL_aregImpute_5)))
+
+
+LDL_complete <- (DPP$LDL[complete.cases(DPP$LDL)])
+
+DPP.AREGIMPUTED_aregImpute_LDL <- as.data.frame(DPP.AREGIMPUTED$imputed$LDL)
+
+LDL_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_LDL$V1
+LDL_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_LDL$V2
+LDL_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_LDL$V3
+LDL_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_LDL$V4
+LDL_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_LDL$V5
+
+LDL_values <- c(LDL_complete,
+                   LDL_aregImpute_1,
+                   LDL_aregImpute_2,
+                   LDL_aregImpute_3,
+                   LDL_aregImpute_4,
+                   LDL_aregImpute_5)
+
+LDL_labels <- c(rep("Original",length(LDL_complete)),
+                   rep("aregImputed_1",length(LDL_aregImpute_1)),
+                   rep("aregImputed_2",length(LDL_aregImpute_2)),
+                   rep("aregImputed_3",length(LDL_aregImpute_3)),
+                   rep("aregImputed_4",length(LDL_aregImpute_4)),
+                   rep("aregImputed_5",length(LDL_aregImpute_5)))
+
+TRIG_complete <- (DPP$TRIG[complete.cases(DPP$TRIG)])
+
+DPP.AREGIMPUTED_aregImpute_TRIG <- as.data.frame(DPP.AREGIMPUTED$imputed$TRIG)
+
+TRIG_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_TRIG$V1
+TRIG_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_TRIG$V2
+TRIG_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_TRIG$V3
+TRIG_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_TRIG$V4
+TRIG_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_TRIG$V5
+
+TRIG_values <- c(TRIG_complete,
+                   TRIG_aregImpute_1,
+                   TRIG_aregImpute_2,
+                   TRIG_aregImpute_3,
+                   TRIG_aregImpute_4,
+                   TRIG_aregImpute_5)
+
+TRIG_labels <- c(rep("Original",length(TRIG_complete)),
+                   rep("aregImputed_1",length(TRIG_aregImpute_1)),
+                   rep("aregImputed_2",length(TRIG_aregImpute_2)),
+                   rep("aregImputed_3",length(TRIG_aregImpute_3)),
+                   rep("aregImputed_4",length(TRIG_aregImpute_4)),
+                   rep("aregImputed_5",length(TRIG_aregImpute_5)))
+
+HOMOC_complete <- (DPP$HOMOC[complete.cases(DPP$HOMOC)])
+
+DPP.AREGIMPUTED_aregImpute_HOMOC <- as.data.frame(DPP.AREGIMPUTED$imputed$HOMOC)
+
+HOMOC_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_HOMOC$V1
+HOMOC_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_HOMOC$V2
+HOMOC_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_HOMOC$V3
+HOMOC_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_HOMOC$V4
+HOMOC_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_HOMOC$V5
+
+HOMOC_values <- c(HOMOC_complete,
+                   HOMOC_aregImpute_1,
+                   HOMOC_aregImpute_2,
+                   HOMOC_aregImpute_3,
+                   HOMOC_aregImpute_4,
+                   HOMOC_aregImpute_5)
+
+HOMOC_labels <- c(rep("Original",length(HOMOC_complete)),
+                   rep("aregImputed_1",length(HOMOC_aregImpute_1)),
+                   rep("aregImputed_2",length(HOMOC_aregImpute_2)),
+                   rep("aregImputed_3",length(HOMOC_aregImpute_3)),
+                   rep("aregImputed_4",length(HOMOC_aregImpute_4)),
+                   rep("aregImputed_5",length(HOMOC_aregImpute_5)))
+
+
+GLUT_complete <- (DPP$GLUT[complete.cases(DPP$GLUT)])
+
+DPP.AREGIMPUTED_aregImpute_GLUT <- as.data.frame(DPP.AREGIMPUTED$imputed$GLUT)
+
+GLUT_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_GLUT$V1
+GLUT_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_GLUT$V2
+GLUT_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_GLUT$V3
+GLUT_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_GLUT$V4
+GLUT_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_GLUT$V5
+
+GLUT_values <- c(GLUT_complete,
+                   GLUT_aregImpute_1,
+                   GLUT_aregImpute_2,
+                   GLUT_aregImpute_3,
+                   GLUT_aregImpute_4,
+                   GLUT_aregImpute_5)
+
+GLUT_labels <- c(rep("Original",length(GLUT_complete)),
+                   rep("aregImputed_1",length(GLUT_aregImpute_1)),
+                   rep("aregImputed_2",length(GLUT_aregImpute_2)),
+                   rep("aregImputed_3",length(GLUT_aregImpute_3)),
+                   rep("aregImputed_4",length(GLUT_aregImpute_4)),
+                   rep("aregImputed_5",length(GLUT_aregImpute_5)))
+
+
+CREAT_complete <- (DPP$CREAT[complete.cases(DPP$CREAT)])
+
+DPP.AREGIMPUTED_aregImpute_CREAT <- as.data.frame(DPP.AREGIMPUTED$imputed$CREAT)
+
+CREAT_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_CREAT$V1
+CREAT_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_CREAT$V2
+CREAT_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_CREAT$V3
+CREAT_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_CREAT$V4
+CREAT_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_CREAT$V5
+
+CREAT_values <- c(CREAT_complete,
+                   CREAT_aregImpute_1,
+                   CREAT_aregImpute_2,
+                   CREAT_aregImpute_3,
+                   CREAT_aregImpute_4,
+                   CREAT_aregImpute_5)
+
+CREAT_labels <- c(rep("Original",length(CREAT_complete)),
+                   rep("aregImputed_1",length(CREAT_aregImpute_1)),
+                   rep("aregImputed_2",length(CREAT_aregImpute_2)),
+                   rep("aregImputed_3",length(CREAT_aregImpute_3)),
+                   rep("aregImputed_4",length(CREAT_aregImpute_4)),
+                   rep("aregImputed_5",length(CREAT_aregImpute_5)))
+
+
+IMT_complete <- (DPP$IMT[complete.cases(DPP$IMT)])
+
+DPP.AREGIMPUTED_aregImpute_IMT <- as.data.frame(DPP.AREGIMPUTED$imputed$IMT)
+
+IMT_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_IMT$V1
+IMT_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_IMT$V2
+IMT_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_IMT$V3
+IMT_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_IMT$V4
+IMT_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_IMT$V5
+
+IMT_values <- c(IMT_complete,
+                   IMT_aregImpute_1,
+                   IMT_aregImpute_2,
+                   IMT_aregImpute_3,
+                   IMT_aregImpute_4,
+                   IMT_aregImpute_5)
+
+IMT_labels <- c(rep("Original",length(IMT_complete)),
+                   rep("aregImputed_1",length(IMT_aregImpute_1)),
+                   rep("aregImputed_2",length(IMT_aregImpute_2)),
+                   rep("aregImputed_3",length(IMT_aregImpute_3)),
+                   rep("aregImputed_4",length(IMT_aregImpute_4)),
+                   rep("aregImputed_5",length(IMT_aregImpute_5)))
+
+
+PACKYRS_complete <- (DPP$packyrs[complete.cases(DPP$packyrs)])
+
+DPP.AREGIMPUTED_aregImpute_PACKYRS <- as.data.frame(DPP.AREGIMPUTED$imputed$packyrs)
+
+PACKYRS_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_PACKYRS$V1
+PACKYRS_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_PACKYRS$V2
+PACKYRS_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_PACKYRS$V3
+PACKYRS_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_PACKYRS$V4
+PACKYRS_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_PACKYRS$V5
+
+PACKYRS_values <- c(PACKYRS_complete,
+                   PACKYRS_aregImpute_1,
+                   PACKYRS_aregImpute_2,
+                   PACKYRS_aregImpute_3,
+                   PACKYRS_aregImpute_4,
+                   PACKYRS_aregImpute_5)
+
+PACKYRS_labels <- c(rep("Original",length(PACKYRS_complete)),
+                   rep("aregImputed_1",length(PACKYRS_aregImpute_1)),
+                   rep("aregImputed_2",length(PACKYRS_aregImpute_2)),
+                   rep("aregImputed_3",length(PACKYRS_aregImpute_3)),
+                   rep("aregImputed_4",length(PACKYRS_aregImpute_4)),
+                   rep("aregImputed_5",length(PACKYRS_aregImpute_5)))
+
+
+VARIABLE_labels <- c(rep("SYSTBP",length(SYSTBP_labels)),
+                     rep("DIASTBP",length(DIASTBP_labels)),
+                     rep("SYSTH",length(SYSTH_labels)),
+                     rep("DIASTH",length(DIASTH_labels)),
+                     rep("LENGTH",length(LENGTH_labels)),
+                     rep("WEIGHT",length(WEIGHT_labels)),
+                     rep("BMI",length(BMI_labels)),
+                     rep("CHOL",length(CHOL_labels)),
+                     rep("HDL",length(HDL_labels)),
+                     rep("LDL",length(LDL_labels)),
+                     rep("TRIG",length(TRIG_labels)),
+                     rep("HOMOC",length(HOMOC_labels)),
+                     rep("GLUT",length(GLUT_labels)),
+                     rep("CREAT",length(CREAT_labels)),
+                     rep("IMT",length(IMT_labels)),
+                     rep("PACKYRS",length(PACKYRS_labels)))
+
+NUMERIC_VARIABLES_postimputation <- cbind(VARIABLE_labels,
+                                        c(SYSTBP_labels,
+                                          DIASTBP_labels,
+                                          SYSTH_labels,
+                                          DIASTH_labels,
+                                          LENGTH_labels,
+                                          WEIGHT_labels,
+                                          BMI_labels,
+                                          CHOL_labels,
+                                          HDL_labels,
+                                          LDL_labels,
+                                          TRIG_labels,
+                                          HOMOC_labels,
+                                          GLUT_labels,
+                                          CREAT_labels,
+                                          IMT_labels,
+                                          PACKYRS_labels),
+                                        c(SYSTBP_values,
+                                          DIASTBP_values,
+                                          SYSTH_values,
+                                          DIASTH_values,
+                                          LENGTH_values,
+                                          WEIGHT_values,
+                                          BMI_values,
+                                          CHOL_values,
+                                          HDL_values,
+                                          LDL_values,
+                                          TRIG_values,
+                                          HOMOC_values,
+                                          GLUT_values,
+                                          CREAT_values,
+                                          IMT_values,
+                                          PACKYRS_values))
+NUMERIC_VARIABLES_postimputation <- as.data.frame(NUMERIC_VARIABLES_postimputation)
+
+colnames(NUMERIC_VARIABLES_postimputation) <- c("Variable",
+                                                "Category",
+                                                "Value")
+
+NUMERIC_VARIABLES_postimputation$Variable <- factor(NUMERIC_VARIABLES_postimputation$Variable,
+                                         levels=c("PACKYRS",
+                                                  "IMT",
+                                                  "CREAT",
+                                                  "GLUT",
+                                                  "HOMOC",
+                                                  "TRIG",
+                                                  "LDL",
+                                                  "HDL",
+                                                  "CHOL",
+                                                  "BMI",
+                                                  "WEIGHT",
+                                                  "LENGTH",
+                                                  "DIASTH",
+                                                  "SYSTH",
+                                                  "DIASTBP",
+                                                  "SYSTBP"))
+
+NUMERIC_VARIABLES_postimputation$Category <- factor(NUMERIC_VARIABLES_postimputation$Category,
+                                         levels=c("Original",
+                                                  "aregImputed_1",
+                                                  "aregImputed_2",
+                                                  "aregImputed_3",
+                                                  "aregImputed_4",
+                                                  "aregImputed_5"))
+
+NUMERIC_VARIABLES_postimputation_SYSTBP <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="SYSTBP",]
+NUMERIC_VARIABLES_postimputation_SYSTH <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="SYSTH",]
+NUMERIC_VARIABLES_postimputation_DIASTBP <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="DIASTBP",]
+NUMERIC_VARIABLES_postimputation_DIASTH <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="DIASTH",]
+NUMERIC_VARIABLES_postimputation_LENGTH <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="LENGTH",]
+NUMERIC_VARIABLES_postimputation_WEIGHT <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="WEIGHT",]
+NUMERIC_VARIABLES_postimputation_BMI <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="BMI",]
+NUMERIC_VARIABLES_postimputation_CHOL <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="CHOL",]
+NUMERIC_VARIABLES_postimputation_HDL <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="HDL",]
+NUMERIC_VARIABLES_postimputation_LDL <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="LDL",]
+NUMERIC_VARIABLES_postimputation_TRIG <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="TRIG",]
+NUMERIC_VARIABLES_postimputation_HOMOC <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="HOMOC",]
+NUMERIC_VARIABLES_postimputation_GLUT <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="GLUT",]
+NUMERIC_VARIABLES_postimputation_CREAT <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="CREAT",]
+NUMERIC_VARIABLES_postimputation_IMT <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="IMT",]
+NUMERIC_VARIABLES_postimputation_PACKYRS <- NUMERIC_VARIABLES_postimputation[NUMERIC_VARIABLES_postimputation$Variable=="PACKYRS",]
+
+DENSITY_SYSTBP <- densityplot(~ Value | Variable, 
+            data = NUMERIC_VARIABLES_postimputation_SYSTBP, 
+            groups = Category,
+            plot.points = FALSE, 
+            ref = TRUE,
+            scales=list(relation="free"),
+            auto.key = list(columns = 1),
+            par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_SYSTH <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_SYSTH, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_DIASTBP <- densityplot(~ Value | Variable, 
+                               data = NUMERIC_VARIABLES_postimputation_DIASTBP, 
+                               groups = Category,
+                               plot.points = FALSE, 
+                               ref = TRUE,
+                               scales=list(relation="free"),
+                               auto.key = list(columns = 1),
+                               par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_DIASTH <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_DIASTH, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_LENGTH <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_LENGTH, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_WEIGHT <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_WEIGHT, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_BMI <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_BMI, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_CHOL <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_CHOL, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_HDL <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_HDL, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_LDL <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_LDL, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_TRIG <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_TRIG, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_HOMOC <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_HOMOC, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_GLUT <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_GLUT, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_CREAT <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_CREAT, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_IMT <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_IMT, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+DENSITY_PACKYRS <- densityplot(~ Value | Variable, 
+                              data = NUMERIC_VARIABLES_postimputation_PACKYRS, 
+                              groups = Category,
+                              plot.points = FALSE, 
+                              ref = TRUE,
+                              scales=list(relation="free"),
+                              auto.key = list(columns = 1),
+                              par.settings = list(superpose.line = list(lwd=2)))
+
+
+grid.arrange(DENSITY_SYSTBP, 
+             DENSITY_SYSTH, 
+             DENSITY_DIASTBP, 
+             DENSITY_DIASTH,
+             DENSITY_LENGTH,
+             DENSITY_WEIGHT,
+             DENSITY_BMI,
+             DENSITY_CHOL,
+             DENSITY_HDL,
+             DENSITY_LDL,
+             DENSITY_TRIG,
+             DENSITY_HOMOC,
+             DENSITY_GLUT,
+             DENSITY_CREAT,
+             DENSITY_IMT,
+             DENSITY_PACKYRS,
+             ncol = 4) 
+
+##################################
+# Evaluating the plausibility of the
+# AREG-imputed values for the
+# numerical variables
+##################################
+
+DIABETES_complete <- (DPP$DIABETES[complete.cases(DPP$DIABETES)])
+
+DPP.AREGIMPUTED_aregImpute_DIABETES <- as.data.frame(DPP.AREGIMPUTED$imputed$DIABETES)
+
+DIABETES_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_DIABETES$V1
+DIABETES_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_DIABETES$V2
+DIABETES_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_DIABETES$V3
+DIABETES_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_DIABETES$V4
+DIABETES_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_DIABETES$V5
+
+DIABETES_values <- c(DIABETES_complete,
+                       DIABETES_aregImpute_1,
+                       DIABETES_aregImpute_2,
+                       DIABETES_aregImpute_3,
+                       DIABETES_aregImpute_4,
+                       DIABETES_aregImpute_5)
+
+DIABETES_labels <- c(rep("Original",length(DIABETES_complete)),
+            rep("aregImputed_1",length(DIABETES_aregImpute_1)),
+            rep("aregImputed_2",length(DIABETES_aregImpute_2)),
+            rep("aregImputed_3",length(DIABETES_aregImpute_3)),
+            rep("aregImputed_4",length(DIABETES_aregImpute_4)),
+            rep("aregImputed_5",length(DIABETES_aregImpute_5)))
+
+DIABETES_postimputation <- cbind(DIABETES_values,
+                                 DIABETES_labels)
+
+DIABETES_postimputation <- as.data.frame(DIABETES_postimputation)
+
+colnames(DIABETES_postimputation) <- c("Value",
+                                       "Category")
+
+DIABETES_postimputation_proportion <- as.data.frame(prop.table(table(DIABETES_postimputation), 2))
+
+DIABETES_postimputation_proportion$Category <- factor(DIABETES_postimputation_proportion$Category,
+                                         levels=c("Original",
+                                                  "aregImputed_1",
+                                                  "aregImputed_2",
+                                                  "aregImputed_3",
+                                                  "aregImputed_4",
+                                                  "aregImputed_5"))
+
+DIABETES_postimputation_proportion$Variable <- rep("DIABETES",nrow(DIABETES_postimputation_proportion))
+
+BAR_DIABETES <- barchart(Freq ~ Category | Variable,
+         data=DIABETES_postimputation_proportion,
+         groups = Value,
+         stack=TRUE,
+         ylab = "Proportion",
+         auto.key = list(adj = 1))
+
+
+STENOSIS_complete <- (DPP$STENOSIS[complete.cases(DPP$STENOSIS)])
+
+DPP.AREGIMPUTED_aregImpute_STENOSIS <- as.data.frame(DPP.AREGIMPUTED$imputed$STENOSIS)
+
+STENOSIS_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_STENOSIS$V1
+STENOSIS_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_STENOSIS$V2
+STENOSIS_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_STENOSIS$V3
+STENOSIS_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_STENOSIS$V4
+STENOSIS_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_STENOSIS$V5
+
+STENOSIS_values <- c(STENOSIS_complete,
+                       STENOSIS_aregImpute_1,
+                       STENOSIS_aregImpute_2,
+                       STENOSIS_aregImpute_3,
+                       STENOSIS_aregImpute_4,
+                       STENOSIS_aregImpute_5)
+
+STENOSIS_labels <- c(rep("Original",length(STENOSIS_complete)),
+            rep("aregImputed_1",length(STENOSIS_aregImpute_1)),
+            rep("aregImputed_2",length(STENOSIS_aregImpute_2)),
+            rep("aregImputed_3",length(STENOSIS_aregImpute_3)),
+            rep("aregImputed_4",length(STENOSIS_aregImpute_4)),
+            rep("aregImputed_5",length(STENOSIS_aregImpute_5)))
+
+STENOSIS_postimputation <- cbind(STENOSIS_values,
+                                 STENOSIS_labels)
+
+STENOSIS_postimputation <- as.data.frame(STENOSIS_postimputation)
+
+colnames(STENOSIS_postimputation) <- c("Value",
+                                       "Category")
+
+STENOSIS_postimputation_proportion <- as.data.frame(prop.table(table(STENOSIS_postimputation), 2))
+
+STENOSIS_postimputation_proportion$Category <- factor(STENOSIS_postimputation_proportion$Category,
+                                         levels=c("Original",
+                                                  "aregImputed_1",
+                                                  "aregImputed_2",
+                                                  "aregImputed_3",
+                                                  "aregImputed_4",
+                                                  "aregImputed_5"))
+
+STENOSIS_postimputation_proportion$Variable <- rep("STENOSIS",nrow(STENOSIS_postimputation_proportion))
+
+BAR_STENOSIS <- barchart(Freq ~ Category | Variable,
+         data=STENOSIS_postimputation_proportion,
+         groups = Value,
+         stack=TRUE,
+         ylab = "Proportion",
+         auto.key = list(adj = 1))
+
+ALBUMIN_complete <- (DPP$ albumin [complete.cases(DPP$albumin)])
+
+DPP.AREGIMPUTED_aregImpute_ALBUMIN <- as.data.frame(DPP.AREGIMPUTED$imputed$ albumin)
+
+ALBUMIN_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_ALBUMIN$V1
+ALBUMIN_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_ALBUMIN$V2
+ALBUMIN_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_ALBUMIN$V3
+ALBUMIN_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_ALBUMIN$V4
+ALBUMIN_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_ALBUMIN$V5
+
+ALBUMIN_values <- c(ALBUMIN_complete,
+                       ALBUMIN_aregImpute_1,
+                       ALBUMIN_aregImpute_2,
+                       ALBUMIN_aregImpute_3,
+                       ALBUMIN_aregImpute_4,
+                       ALBUMIN_aregImpute_5)
+
+ALBUMIN_labels <- c(rep("Original",length(ALBUMIN_complete)),
+            rep("aregImputed_1",length(ALBUMIN_aregImpute_1)),
+            rep("aregImputed_2",length(ALBUMIN_aregImpute_2)),
+            rep("aregImputed_3",length(ALBUMIN_aregImpute_3)),
+            rep("aregImputed_4",length(ALBUMIN_aregImpute_4)),
+            rep("aregImputed_5",length(ALBUMIN_aregImpute_5)))
+
+ALBUMIN_postimputation <- cbind(ALBUMIN_values,
+                                 ALBUMIN_labels)
+
+ALBUMIN_postimputation <- as.data.frame(ALBUMIN_postimputation)
+
+colnames(ALBUMIN_postimputation) <- c("Value",
+                                       "Category")
+
+ALBUMIN_postimputation_proportion <- as.data.frame(prop.table(table(ALBUMIN_postimputation), 2))
+
+ALBUMIN_postimputation_proportion$Category <- factor(ALBUMIN_postimputation_proportion$Category,
+                                         levels=c("Original",
+                                                  "aregImputed_1",
+                                                  "aregImputed_2",
+                                                  "aregImputed_3",
+                                                  "aregImputed_4",
+                                                  "aregImputed_5"))
+
+ALBUMIN_postimputation_proportion$Variable <- rep("ALBUMIN",nrow(ALBUMIN_postimputation_proportion))
+
+BAR_ALBUMIN <- barchart(Freq ~ Category | Variable,
+         data=ALBUMIN_postimputation_proportion,
+         groups = Value,
+         stack=TRUE,
+         ylab = "Proportion",
+         auto.key = list(adj = 1))
+
+SMOKING_complete <- (DPP$ SMOKING [complete.cases(DPP$SMOKING)])
+
+DPP.AREGIMPUTED_aregImpute_SMOKING <- as.data.frame(DPP.AREGIMPUTED$imputed$SMOKING)
+
+SMOKING_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_SMOKING$V1
+SMOKING_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_SMOKING$V2
+SMOKING_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_SMOKING$V3
+SMOKING_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_SMOKING$V4
+SMOKING_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_SMOKING$V5
+
+SMOKING_values <- c(SMOKING_complete,
+                       SMOKING_aregImpute_1,
+                       SMOKING_aregImpute_2,
+                       SMOKING_aregImpute_3,
+                       SMOKING_aregImpute_4,
+                       SMOKING_aregImpute_5)
+
+SMOKING_labels <- c(rep("Original",length(SMOKING_complete)),
+            rep("aregImputed_1",length(SMOKING_aregImpute_1)),
+            rep("aregImputed_2",length(SMOKING_aregImpute_2)),
+            rep("aregImputed_3",length(SMOKING_aregImpute_3)),
+            rep("aregImputed_4",length(SMOKING_aregImpute_4)),
+            rep("aregImputed_5",length(SMOKING_aregImpute_5)))
+
+SMOKING_postimputation <- cbind(SMOKING_values,
+                                 SMOKING_labels)
+
+SMOKING_postimputation <- as.data.frame(SMOKING_postimputation)
+
+colnames(SMOKING_postimputation) <- c("Value",
+                                       "Category")
+
+SMOKING_postimputation_proportion <- as.data.frame(prop.table(table(SMOKING_postimputation), 2))
+
+SMOKING_postimputation_proportion$Category <- factor(SMOKING_postimputation_proportion$Category,
+                                         levels=c("Original",
+                                                  "aregImputed_1",
+                                                  "aregImputed_2",
+                                                  "aregImputed_3",
+                                                  "aregImputed_4",
+                                                  "aregImputed_5"))
+
+SMOKING_postimputation_proportion$Variable <- rep("SMOKING",nrow(SMOKING_postimputation_proportion))
+
+BAR_SMOKING <- barchart(Freq ~ Category | Variable,
+         data=SMOKING_postimputation_proportion,
+         groups = Value,
+         stack=TRUE,
+         ylab = "Proportion",
+         auto.key = list(adj = 1))
+
+ALCOHOL_complete <- (DPP$ alcohol [complete.cases(DPP$alcohol)])
+
+DPP.AREGIMPUTED_aregImpute_ALCOHOL <- as.data.frame(DPP.AREGIMPUTED$imputed$alcohol)
+
+ALCOHOL_aregImpute_1 <- DPP.AREGIMPUTED_aregImpute_ALCOHOL$V1
+ALCOHOL_aregImpute_2 <- DPP.AREGIMPUTED_aregImpute_ALCOHOL$V2
+ALCOHOL_aregImpute_3 <- DPP.AREGIMPUTED_aregImpute_ALCOHOL$V3
+ALCOHOL_aregImpute_4 <- DPP.AREGIMPUTED_aregImpute_ALCOHOL$V4
+ALCOHOL_aregImpute_5 <- DPP.AREGIMPUTED_aregImpute_ALCOHOL$V5
+
+ALCOHOL_values <- c(ALCOHOL_complete,
+                       ALCOHOL_aregImpute_1,
+                       ALCOHOL_aregImpute_2,
+                       ALCOHOL_aregImpute_3,
+                       ALCOHOL_aregImpute_4,
+                       ALCOHOL_aregImpute_5)
+
+ALCOHOL_labels <- c(rep("Original",length(ALCOHOL_complete)),
+            rep("aregImputed_1",length(ALCOHOL_aregImpute_1)),
+            rep("aregImputed_2",length(ALCOHOL_aregImpute_2)),
+            rep("aregImputed_3",length(ALCOHOL_aregImpute_3)),
+            rep("aregImputed_4",length(ALCOHOL_aregImpute_4)),
+            rep("aregImputed_5",length(ALCOHOL_aregImpute_5)))
+
+ALCOHOL_postimputation <- cbind(ALCOHOL_values,
+                                 ALCOHOL_labels)
+
+ALCOHOL_postimputation <- as.data.frame(ALCOHOL_postimputation)
+
+colnames(ALCOHOL_postimputation) <- c("Value",
+                                       "Category")
+
+ALCOHOL_postimputation_proportion <- as.data.frame(prop.table(table(ALCOHOL_postimputation), 2))
+
+ALCOHOL_postimputation_proportion$Category <- factor(ALCOHOL_postimputation_proportion$Category,
+                                         levels=c("Original",
+                                                  "aregImputed_1",
+                                                  "aregImputed_2",
+                                                  "aregImputed_3",
+                                                  "aregImputed_4",
+                                                  "aregImputed_5"))
+
+ALCOHOL_postimputation_proportion$Variable <- rep("ALCOHOL",nrow(ALCOHOL_postimputation_proportion))
+
+BAR_ALCOHOL <- barchart(Freq ~ Category | Variable,
+         data=ALCOHOL_postimputation_proportion,
+         groups = Value,
+         stack=TRUE,
+         ylab = "Proportion",
+         auto.key = list(adj = 1))
+
+
+grid.arrange(BAR_DIABETES, 
+             BAR_STENOSIS, 
+             BAR_ALBUMIN, 
+             BAR_SMOKING,
+             BAR_ALCOHOL,
+             ncol = 2)
+
+```
+
+</details>
+
+### 1.2.5 Model Specification
+|
+| Missing data imputation evaluation using full model specification:
+|
+| **[A]** Certain variables were initially excluded for modelling in order to (1) reduce potential multicollinearity among predictors (those which reported high variance inflation factor values); (2) remove variables which were minimally associated to the outcome based from initial data exploration (those which reported low Wald chi-squared values); and (3) only retain important and standard risk factors (those which have been previously shown as significant clinical survival predictors based from expert recommendations and/or literature review) :
+|      **[A.1]** <span style="color: #FF0000">DIASTH</span> variable (numeric)
+|      **[A.2]** <span style="color: #FF0000">DIASBP</span> variable (numeric)
+|      **[A.3]** <span style="color: #FF0000">SYSTBP</span> variable (numeric)
+|      **[A.4]** <span style="color: #FF0000">LENGTH</span> variable (numeric)
+|      **[A.5]** <span style="color: #FF0000">WEIGHT</span> variable (numeric)
+|      **[A.6]** <span style="color: #FF0000">CHOL</span> variable (numeric)
+|      **[A.7]** <span style="color: #FF0000">LDL</span> variable (numeric)
+|      **[A.8]** <span style="color: #FF0000">TRIG</span> variable (numeric)
+|      **[A.9]** <span style="color: #FF0000">GLUT</span> variable (numeric)
+|      **[A.10]** <span style="color: #FF0000">PACKYRS</span> variable (numeric)
+|
+| **[B]** The variables selected to be a part of the full model comprised of the following:
+|      **[B.1]** <span style="color: #FF0000">AGE</span> variable (numeric) coded using its squared value after 50 years [if (AGE>50) then (AGE-50)^2 else 0]
+|      **[B.2]** <span style="color: #FF0000">SEX</span> variable (factor)
+|      **[B.3]** <span style="color: #FF0000">SMOKING</span> variable (factor)
+|      **[B.4]** <span style="color: #FF0000">ALCOHOL</span> variable (factor)
+|      **[B.5]** <span style="color: #FF0000">BMI</span> variable (numeric)
+|      **[B.6]** <span style="color: #FF0000">SYSTH</span> variable (numeric)
+|      **[B.7]** <span style="color: #FF0000">HDL</span> variable (numeric)
+|      **[B.8]** <span style="color: #FF0000">DIABETES</span> variable (factor)
+|      **[B.9]** <span style="color: #FF0000">CEREBRAL</span> variable (numeric), <span style="color: #FF0000">CARDIAC</span> variable (numeric), <span style="color: #FF0000">AAA</span> variable (numeric) and <span style="color: #FF0000">PERIPH</span> variable (numeric) coded using their linear combination [CEREBRAL + CARDIAC + (2*AAA) + PERIPH] called <span style="color: #FF0000">SUMSCORE_5LEVELS</span> variable (numeric)
+|      **[B.10]** <span style="color: #FF0000">HOMOC</span> variable (numeric)
+|      **[B.11]** <span style="color: #FF0000">CREAT</span> variable (numeric) coded using its logarithm [log(CREAT)]
+|      **[B.12]** <span style="color: #FF0000">ALBUMIN</span> variable (factor)
+|      **[B.13]** <span style="color: #FF0000">STENOSIS</span> variable (factor)
+|      **[B.14]** <span style="color: #FF0000">IMT</span> variable (numeric)
+|      **[B.15]** <span style="color: #FF0000">HOMOC</span> variable (numeric)
+|
+| **[C]** The five imputed datasets (<span style="color: #FF0000">aregImputed_1</span>, <span style="color: #FF0000">aregImputed_2</span>, <span style="color: #FF0000">aregImputed_3</span>, <span style="color: #FF0000">aregImputed_4</span> and <span style="color: #FF0000">aregImputed_5</span>) demonstrated generally stable estimated coefficients for the full cox proportional hazards model. The imputed data from iteration 3 (<span style="color: #FF0000">aregImputed_3</span>) was assigned for the subsequent model selection process. 
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.5, warning=FALSE, message=FALSE}
+##################################
+# Loading the modelling dataset
+# by combining the complete and imputed values
+##################################
+
+##################################
+# Combining the complete and 
+# 1ST imputation results from AREG
+##################################
+DPP.AREGIMPUTED_1 <- impute.transcan(DPP.AREGIMPUTED,
+                                     imputation=1,
+                                     data=DPP,
+                                     list.out=TRUE,
+                                     pr=FALSE,
+                                     check=FALSE)
+
+SMART.AREGIMPUTED_1 <- SMART
+
+SMART.AREGIMPUTED_1[names(DPP.AREGIMPUTED_1)] <- DPP.AREGIMPUTED_1 
+
+SMART.AREGIMPUTED_1$CEREBRAL  <- as.numeric(as.character(SMART.AREGIMPUTED_1$CEREBRAL))
+SMART.AREGIMPUTED_1$CARDIAC   <- as.numeric(as.character(SMART.AREGIMPUTED_1$CARDIAC))
+SMART.AREGIMPUTED_1$AAA       <- as.numeric(as.character(SMART.AREGIMPUTED_1$AAA))
+SMART.AREGIMPUTED_1$PERIPH    <- as.numeric(as.character(SMART.AREGIMPUTED_1$PERIPH))
+
+SMART.AREGIMPUTED_1$SUMSCORE_5LEVELS  <- SMART.AREGIMPUTED_1$CEREBRAL + 
+  SMART.AREGIMPUTED_1$CARDIAC +
+  (2*SMART.AREGIMPUTED_1$AAA) +
+  SMART.AREGIMPUTED_1$PERIPH
+
+##################################
+# Combining the complete and 
+# 2ND imputation results from AREG
+##################################
+DPP.AREGIMPUTED_2 <- impute.transcan(DPP.AREGIMPUTED,
+                                     imputation=2,
+                                     data=DPP,
+                                     list.out=TRUE,
+                                     pr=FALSE,
+                                     check=FALSE)
+
+SMART.AREGIMPUTED_2 <- SMART
+
+SMART.AREGIMPUTED_2[names(DPP.AREGIMPUTED_2)] <- DPP.AREGIMPUTED_2 
+
+SMART.AREGIMPUTED_2$CEREBRAL  <- as.numeric(as.character(SMART.AREGIMPUTED_2$CEREBRAL))
+SMART.AREGIMPUTED_2$CARDIAC   <- as.numeric(as.character(SMART.AREGIMPUTED_2$CARDIAC))
+SMART.AREGIMPUTED_2$AAA       <- as.numeric(as.character(SMART.AREGIMPUTED_2$AAA))
+SMART.AREGIMPUTED_2$PERIPH    <- as.numeric(as.character(SMART.AREGIMPUTED_2$PERIPH))
+
+SMART.AREGIMPUTED_2$SUMSCORE_5LEVELS  <- SMART.AREGIMPUTED_2$CEREBRAL + 
+  SMART.AREGIMPUTED_2$CARDIAC +
+  (2*SMART.AREGIMPUTED_2$AAA) +
+  SMART.AREGIMPUTED_2$PERIPH
+
+##################################
+# Combining the complete and 
+# 3RD imputation results from AREG
+##################################
+DPP.AREGIMPUTED_3 <- impute.transcan(DPP.AREGIMPUTED,
+                                     imputation=3,
+                                     data=DPP,
+                                     list.out=TRUE,
+                                     pr=FALSE,
+                                     check=FALSE)
+
+SMART.AREGIMPUTED_3 <- SMART
+
+SMART.AREGIMPUTED_3[names(DPP.AREGIMPUTED_3)] <- DPP.AREGIMPUTED_3 
+
+SMART.AREGIMPUTED_3$CEREBRAL  <- as.numeric(as.character(SMART.AREGIMPUTED_3$CEREBRAL))
+SMART.AREGIMPUTED_3$CARDIAC   <- as.numeric(as.character(SMART.AREGIMPUTED_3$CARDIAC))
+SMART.AREGIMPUTED_3$AAA       <- as.numeric(as.character(SMART.AREGIMPUTED_3$AAA))
+SMART.AREGIMPUTED_3$PERIPH    <- as.numeric(as.character(SMART.AREGIMPUTED_3$PERIPH))
+
+SMART.AREGIMPUTED_3$SUMSCORE_5LEVELS  <- SMART.AREGIMPUTED_3$CEREBRAL + 
+  SMART.AREGIMPUTED_3$CARDIAC +
+  (2*SMART.AREGIMPUTED_3$AAA) +
+  SMART.AREGIMPUTED_3$PERIPH
+
+##################################
+# Combining the complete and 
+# 4TH imputation results from AREG
+##################################
+DPP.AREGIMPUTED_4 <- impute.transcan(DPP.AREGIMPUTED,
+                                     imputation=4,
+                                     data=DPP,
+                                     list.out=TRUE,
+                                     pr=FALSE,
+                                     check=FALSE)
+
+SMART.AREGIMPUTED_4 <- SMART
+
+SMART.AREGIMPUTED_4[names(DPP.AREGIMPUTED_4)] <- DPP.AREGIMPUTED_4 
+
+SMART.AREGIMPUTED_4$CEREBRAL  <- as.numeric(as.character(SMART.AREGIMPUTED_4$CEREBRAL))
+SMART.AREGIMPUTED_4$CARDIAC   <- as.numeric(as.character(SMART.AREGIMPUTED_4$CARDIAC))
+SMART.AREGIMPUTED_4$AAA       <- as.numeric(as.character(SMART.AREGIMPUTED_4$AAA))
+SMART.AREGIMPUTED_4$PERIPH    <- as.numeric(as.character(SMART.AREGIMPUTED_4$PERIPH))
+
+SMART.AREGIMPUTED_4$SUMSCORE_5LEVELS  <- SMART.AREGIMPUTED_4$CEREBRAL + 
+  SMART.AREGIMPUTED_4$CARDIAC +
+  (2*SMART.AREGIMPUTED_4$AAA) +
+  SMART.AREGIMPUTED_4$PERIPH
+
+##################################
+# Combining the complete and 
+# 5TH imputation results from AREG
+##################################
+DPP.AREGIMPUTED_5 <- impute.transcan(DPP.AREGIMPUTED,
+                                     imputation=5,
+                                     data=DPP,
+                                     list.out=TRUE,
+                                     pr=FALSE,
+                                     check=FALSE)
+
+SMART.AREGIMPUTED_5 <- SMART
+
+SMART.AREGIMPUTED_5[names(DPP.AREGIMPUTED_5)] <- DPP.AREGIMPUTED_5 
+
+SMART.AREGIMPUTED_5$CEREBRAL  <- as.numeric(as.character(SMART.AREGIMPUTED_5$CEREBRAL))
+SMART.AREGIMPUTED_5$CARDIAC   <- as.numeric(as.character(SMART.AREGIMPUTED_5$CARDIAC))
+SMART.AREGIMPUTED_5$AAA       <- as.numeric(as.character(SMART.AREGIMPUTED_5$AAA))
+SMART.AREGIMPUTED_5$PERIPH    <- as.numeric(as.character(SMART.AREGIMPUTED_5$PERIPH))
+
+SMART.AREGIMPUTED_5$SUMSCORE_5LEVELS  <- SMART.AREGIMPUTED_5$CEREBRAL + 
+  SMART.AREGIMPUTED_5$CARDIAC +
+  (2*SMART.AREGIMPUTED_5$AAA) +
+  SMART.AREGIMPUTED_5$PERIPH
+
+##################################
+# Exploring the single imputation
+# results using AREG
+##################################
+
+describe(SMART.AREGIMPUTED_1)
+
+describe(SMART.AREGIMPUTED_2)
+
+describe(SMART.AREGIMPUTED_3)
+
+describe(SMART.AREGIMPUTED_4)
+
+describe(SMART.AREGIMPUTED_5)
+
+##################################
+# Formulating the FULL
+# Cox Proportional Hazards Model
+# Using the combined complete and 
+# 1ST imputation results from AREG
+##################################
+
+SMART.AREGIMPUTED_1$EVENT <- as.numeric(SMART.AREGIMPUTED_1$EVENT)
+SMART.AREGIMPUTED_1$SMOKING <- as.factor(SMART.AREGIMPUTED_1$SMOKING)
+SMART.AREGIMPUTED_1$alcohol <- as.factor(SMART.AREGIMPUTED_1$alcohol)
+SMART.AREGIMPUTED_1$albumin <- as.factor(SMART.AREGIMPUTED_1$albumin)
+
+dd <- datadist(SMART.AREGIMPUTED_1)
+options(datadist="dd")
+
+##################################
+# FULL COMPLETE
+##################################
+
+COXPH.FULL.COMPLETE.AREGIMPUTED_1 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 SYSTBP +
+                                 DIASTH +
+                                 DIASTBP +
+                                 WEIGHT +
+                                 LENGTH +
+                                 CHOL +
+                                 LDL +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT +
+                                 TRIG +
+                                 GLUT +
+                                 packyrs,
+                               data = SMART.AREGIMPUTED_1,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.COMPLETE.AREGIMPUTED_1)
+summary(COXPH.FULL.COMPLETE.AREGIMPUTED_1)
+vif(COXPH.FULL.COMPLETE.AREGIMPUTED_1)
+COXPH.FULL.COMPLETE.AREGIMPUTED_1
+
+##################################
+# FULL
+# After removing variables which are:
+# High multicollinearity contributors
+# Non-standard risk factors
+# Minimal predictors of survival outcome based from initial exploration
+# Minimal predictors of survival outcome based from domain knowledge and literature
+##################################
+
+COXPH.FULL.AREGIMPUTED_1 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_1,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.AREGIMPUTED_1)
+summary(COXPH.FULL.AREGIMPUTED_1)
+vif(COXPH.FULL.AREGIMPUTED_1)
+COXPH.FULL.AREGIMPUTED_1
+
+##################################
+# Formulating the FULL
+# Cox Proportional Hazards Model
+# Using the combined complete and 
+# 2ND imputation results from AREG
+##################################
+
+SMART.AREGIMPUTED_2$EVENT <- as.numeric(SMART.AREGIMPUTED_2$EVENT)
+SMART.AREGIMPUTED_2$SMOKING <- as.factor(SMART.AREGIMPUTED_2$SMOKING)
+SMART.AREGIMPUTED_2$alcohol <- as.factor(SMART.AREGIMPUTED_2$alcohol)
+SMART.AREGIMPUTED_2$albumin <- as.factor(SMART.AREGIMPUTED_2$albumin)
+
+dd <- datadist(SMART.AREGIMPUTED_2)
+options(datadist="dd")
+
+##################################
+# FULL COMPLETE
+##################################
+
+COXPH.FULL.COMPLETE.AREGIMPUTED_2 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 SYSTBP +
+                                 DIASTH +
+                                 DIASTBP +
+                                 WEIGHT +
+                                 LENGTH +
+                                 CHOL +
+                                 LDL +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT +
+                                 TRIG +
+                                 GLUT +
+                                 packyrs,
+                               data = SMART.AREGIMPUTED_2,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.COMPLETE.AREGIMPUTED_2)
+summary(COXPH.FULL.COMPLETE.AREGIMPUTED_2)
+vif(COXPH.FULL.COMPLETE.AREGIMPUTED_2)
+COXPH.FULL.COMPLETE.AREGIMPUTED_2
+
+##################################
+# FULL
+# After removing variables which are:
+# High multicollinearity contributors
+# Non-standard risk factors
+# Minimal predictors of survival outcome based from initial exploration
+# Minimal predictors of survival outcome based from domain knowledge and literature
+##################################
+
+COXPH.FULL.AREGIMPUTED_2 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_2,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.AREGIMPUTED_2)
+summary(COXPH.FULL.AREGIMPUTED_2)
+vif(COXPH.FULL.AREGIMPUTED_2)
+COXPH.FULL.AREGIMPUTED_2
+
+##################################
+# Formulating the FULL
+# Cox Proportional Hazards Model
+# Using the combined complete and 
+# 3RD imputation results from AREG
+##################################
+
+SMART.AREGIMPUTED_3$EVENT <- as.numeric(SMART.AREGIMPUTED_3$EVENT)
+SMART.AREGIMPUTED_3$SMOKING <- as.factor(SMART.AREGIMPUTED_3$SMOKING)
+SMART.AREGIMPUTED_3$alcohol <- as.factor(SMART.AREGIMPUTED_3$alcohol)
+SMART.AREGIMPUTED_3$albumin <- as.factor(SMART.AREGIMPUTED_3$albumin)
+
+dd <- datadist(SMART.AREGIMPUTED_3)
+options(datadist="dd")
+
+##################################
+# FULL COMPLETE
+##################################
+
+COXPH.FULL.COMPLETE.AREGIMPUTED_3 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 SYSTBP +
+                                 DIASTH +
+                                 DIASTBP +
+                                 WEIGHT +
+                                 LENGTH +
+                                 CHOL +
+                                 LDL +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT +
+                                 TRIG +
+                                 GLUT +
+                                 packyrs,
+                               data = SMART.AREGIMPUTED_3,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.COMPLETE.AREGIMPUTED_3)
+summary(COXPH.FULL.COMPLETE.AREGIMPUTED_3)
+vif(COXPH.FULL.COMPLETE.AREGIMPUTED_3)
+COXPH.FULL.COMPLETE.AREGIMPUTED_3
+
+##################################
+# FULL
+# After removing variables which are:
+# High multicollinearity contributors
+# Non-standard risk factors
+# Minimal predictors of survival outcome based from initial exploration
+# Minimal predictors of survival outcome based from domain knowledge and literature
+##################################
+
+COXPH.FULL.AREGIMPUTED_3 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_3,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.AREGIMPUTED_3)
+summary(COXPH.FULL.AREGIMPUTED_3)
+vif(COXPH.FULL.AREGIMPUTED_3)
+COXPH.FULL.AREGIMPUTED_3
+
+
+##################################
+# Formulating the FULL
+# Cox Proportional Hazards Model
+# Using the combined complete and 
+# 4TH imputation results from AREG
+##################################
+
+SMART.AREGIMPUTED_4$EVENT <- as.numeric(SMART.AREGIMPUTED_4$EVENT)
+SMART.AREGIMPUTED_4$SMOKING <- as.factor(SMART.AREGIMPUTED_4$SMOKING)
+SMART.AREGIMPUTED_4$alcohol <- as.factor(SMART.AREGIMPUTED_4$alcohol)
+SMART.AREGIMPUTED_4$albumin <- as.factor(SMART.AREGIMPUTED_4$albumin)
+
+dd <- datadist(SMART.AREGIMPUTED_4)
+options(datadist="dd")
+
+##################################
+# FULL COMPLETE
+##################################
+
+COXPH.FULL.COMPLETE.AREGIMPUTED_4 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 SYSTBP +
+                                 DIASTH +
+                                 DIASTBP +
+                                 WEIGHT +
+                                 LENGTH +
+                                 CHOL +
+                                 LDL +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT +
+                                 TRIG +
+                                 GLUT +
+                                 packyrs,
+                               data = SMART.AREGIMPUTED_4,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.COMPLETE.AREGIMPUTED_4)
+summary(COXPH.FULL.COMPLETE.AREGIMPUTED_4)
+vif(COXPH.FULL.COMPLETE.AREGIMPUTED_4)
+COXPH.FULL.COMPLETE.AREGIMPUTED_4
+
+##################################
+# FULL
+# After removing variables which are:
+# High multicollinearity contributors
+# Non-standard risk factors
+# Minimal predictors of survival outcome based from initial exploration
+# Minimal predictors of survival outcome based from domain knowledge and literature
+##################################
+
+COXPH.FULL.AREGIMPUTED_4 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_4,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.AREGIMPUTED_4)
+summary(COXPH.FULL.AREGIMPUTED_4)
+vif(COXPH.FULL.AREGIMPUTED_4)
+COXPH.FULL.AREGIMPUTED_4
+
+
+##################################
+# Formulating the FULL
+# Cox Proportional Hazards Model
+# Using the combined complete and 
+# 5TH imputation results from AREG
+##################################
+
+SMART.AREGIMPUTED_5$EVENT <- as.numeric(SMART.AREGIMPUTED_5$EVENT)
+SMART.AREGIMPUTED_5$SMOKING <- as.factor(SMART.AREGIMPUTED_5$SMOKING)
+SMART.AREGIMPUTED_5$alcohol <- as.factor(SMART.AREGIMPUTED_5$alcohol)
+SMART.AREGIMPUTED_5$albumin <- as.factor(SMART.AREGIMPUTED_5$albumin)
+
+dd <- datadist(SMART.AREGIMPUTED_5)
+options(datadist="dd")
+
+##################################
+# FULL COMPLETE
+##################################
+
+COXPH.FULL.COMPLETE.AREGIMPUTED_5 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 SYSTBP +
+                                 DIASTH +
+                                 DIASTBP +
+                                 WEIGHT +
+                                 LENGTH +
+                                 CHOL +
+                                 LDL +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT +
+                                 TRIG +
+                                 GLUT +
+                                 packyrs,
+                               data = SMART.AREGIMPUTED_5,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.COMPLETE.AREGIMPUTED_5)
+summary(COXPH.FULL.COMPLETE.AREGIMPUTED_5)
+vif(COXPH.FULL.COMPLETE.AREGIMPUTED_5)
+COXPH.FULL.COMPLETE.AREGIMPUTED_5
+
+##################################
+# FULL
+# After removing variables which are:
+# High multicollinearity contributors
+# Non-standard risk factors
+# Minimal predictors of survival outcome based from initial exploration
+# Minimal predictors of survival outcome based from domain knowledge and literature
+##################################
+
+COXPH.FULL.AREGIMPUTED_5 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_5,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.AREGIMPUTED_5)
+summary(COXPH.FULL.AREGIMPUTED_5)
+vif(COXPH.FULL.AREGIMPUTED_5)
+COXPH.FULL.AREGIMPUTED_5
+
+##################################
+# Consolidating all coefficients from the
+# FULL Cox Proportional Hazards Model
+# Using the combined complete and 
+# 1ST to 5TH imputation results from AREG
+##################################
+
+(COXPH.FULL.AREGIMPUTED_12345.Coefficients <- rbind(coef(COXPH.FULL.AREGIMPUTED_1),
+                                            coef(COXPH.FULL.AREGIMPUTED_2),
+                                            coef(COXPH.FULL.AREGIMPUTED_3),
+                                            coef(COXPH.FULL.AREGIMPUTED_4),
+                                            coef(COXPH.FULL.AREGIMPUTED_5)))
+
+rownames(COXPH.FULL.AREGIMPUTED_12345.Coefficients) <- c("aregImpute_1",
+                                                         "aregImpute_2",
+                                                         "aregImpute_3",
+                                                         "aregImpute_4",
+                                                         "aregImpute_5")
+
+barchart(COXPH.FULL.AREGIMPUTED_12345.Coefficients,
+         groups=rownames(COXPH.FULL.AREGIMPUTED_12345.Coefficients),
+         scales=list(x="free"),
+         auto.key = list(columns = 5),
+         layout = c(4,5),
+         xlab = "Estimated Coefficients",)
+
+```
+
+</details>
+
+### 1.2.6 Model Selection
+|
+| **[A]** Using the imputed data from iteration 3 (<span style="color: #FF0000">aregImputed_3</span>), the full model initially consisted of 14 variables:
+|      **[A.1]** <span style="color: #FF0000">AGE</span> variable (numeric) coded using its squared value after 50 years [if (AGE>50) then (AGE-50)^2 else 0] called <span style="color: #FF0000">AGE_SQUAREDAFTER50</span> variable (numeric)
+|      **[A.2]** <span style="color: #FF0000">SEX</span> variable (factor)
+|      **[A.3]** <span style="color: #FF0000">SMOKING</span> variable (factor)
+|      **[A.4]** <span style="color: #FF0000">ALCOHOL</span> variable (factor)
+|      **[A.5]** <span style="color: #FF0000">BMI</span> variable (numeric)
+|      **[A.6]** <span style="color: #FF0000">SYSTH</span> variable (numeric)
+|      **[A.7]** <span style="color: #FF0000">HDL</span> variable (numeric)
+|      **[A.8]** <span style="color: #FF0000">DIABETES</span> variable (factor)
+|      **[A.9]** <span style="color: #FF0000">CEREBRAL</span> variable (numeric), <span style="color: #FF0000">CARDIAC</span> variable (numeric), <span style="color: #FF0000">AAA</span> variable (numeric) and <span style="color: #FF0000">PERIPH</span> variable (numeric) coded using their linear combination [CEREBRAL + CARDIAC + (2*AAA) + PERIPH] called <span style="color: #FF0000">SUMSCORE_5LEVELS</span> variable (numeric)
+|      **[A.10]** <span style="color: #FF0000">HOMOC</span> variable (numeric)
+|      **[A.11]** <span style="color: #FF0000">CREAT</span> variable (numeric) coded using its logarithm [log(CREAT)] called <span style="color: #FF0000">CREAT_LOG</span> variable (numeric)
+|      **[A.12]** <span style="color: #FF0000">ALBUMIN</span> variable (factor)
+|      **[A.13]** <span style="color: #FF0000">STENOSIS</span> variable (factor)
+|      **[A.14]** <span style="color: #FF0000">IMT</span> variable (numeric)
+|
+| **[B]** With backward elimination process based on the AIC criterion applied during variable selection, the reduced model eventually consisted of only 9 remaining variables:
+|      **[B.1]** <span style="color: #FF0000">AGE</span> variable (numeric) coded using its squared value after 50 years [if (AGE>50) then (AGE-50)^2 else 0] called <span style="color: #FF0000">AGE_SQUAREDAFTER50</span> variable (numeric)
+|      **[B.2]** <span style="color: #FF0000">BMI</span> variable (numeric)
+|      **[B.3]** <span style="color: #FF0000">HDL</span> variable (numeric)
+|      **[B.4]** <span style="color: #FF0000">DIABETES</span> variable (factor)
+|      **[B.5]** <span style="color: #FF0000">CEREBRAL</span> variable (numeric), <span style="color: #FF0000">CARDIAC</span> variable (numeric), <span style="color: #FF0000">AAA</span> variable (numeric) and <span style="color: #FF0000">PERIPH</span> variable (numeric) coded using their linear combination [CEREBRAL + CARDIAC + (2*AAA) + PERIPH] called <span style="color: #FF0000">SUMSCORE_5LEVELS</span> variable (numeric)
+|      **[B.6]** <span style="color: #FF0000">CREAT</span> variable (numeric) coded using its logarithm [log(CREAT)] called <span style="color: #FF0000">CREAT_LOG</span> variable (numeric)
+|      **[B.7]** <span style="color: #FF0000">ALBUMIN</span> variable (factor)
+|      **[B.8]** <span style="color: #FF0000">STENOSIS</span> variable (factor)
+|      **[B.9]** <span style="color: #FF0000">IMT</span> variable (numeric)
+|
+| **[C]** The reduced model was justified as the inclusion of the variables creating a full model did not show any significant improvement to model fit (p=0.654, Likelihood Ratio Test).
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.6, warning=FALSE, message=FALSE}
+##################################
+# Loading the 3RD imputation results from AREG
+# for the subsequent model specification
+##################################
+
+##################################
+# FULL MODEL
+# with 14 variables
+##################################
+
+COXPH.FULL.AREGIMPUTED_3 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL +
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_3,
+                               x=T,
+                               y=T,
+                               surv=T)
+anova(COXPH.FULL.AREGIMPUTED_3)
+summary(COXPH.FULL.AREGIMPUTED_3)
+COXPH.FULL.AREGIMPUTED_3
+
+rcorr.cens(-as.numeric(COXPH.FULL.AREGIMPUTED_3$linear.pred),COXPH.FULL.AREGIMPUTED_3$y)[1]
+
+##################################
+# REDUCED MODEL
+# with 14 variables evaluated
+# using backward stepwise selection
+# resulting to 9 variables
+##################################
+
+BackwardElimination <- fastbw(COXPH.FULL.AREGIMPUTED_3,
+                           rule="aic",
+                           type="individual")
+
+COXPH.BACKWARDELIMINATION.AREGIMPUTED_3 <- update(COXPH.FULL.AREGIMPUTED_3,                                              ~COXPH.FULL.AREGIMPUTED_3$x[,BackwardElimination$parms.kept])
+
+COXPH.BACKWARDELIMINATION.AREGIMPUTED_3
+
+
+COXPH.REDUCED.AREGIMPUTED_3 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 BMI +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_3,
+                               x=T,
+                               y=T,
+                               surv=T)
+
+anova(COXPH.REDUCED.AREGIMPUTED_3)
+summary(COXPH.REDUCED.AREGIMPUTED_3)
+COXPH.REDUCED.AREGIMPUTED_3
+
+rcorr.cens(-as.numeric(COXPH.REDUCED.AREGIMPUTED_3$linear.pred),COXPH.REDUCED.AREGIMPUTED_3$y)[1]
+
+##################################
+# Formulating the FULL and REDUCED models
+##################################
+SMART.AREGIMPUTED_3$AGE_SQUAREDAFTER50 <- ifelse(SMART.AREGIMPUTED_3$AGE>50, (SMART.AREGIMPUTED_3$AGE-50)^2,0)
+SMART.AREGIMPUTED_3$CREAT_LOG <- log(SMART.AREGIMPUTED_3$CREAT)
+
+
+COXPH.AREGIMPUTED_3.SurvivalResponse <- "Surv(TEVENT, EVENT)"
+COXPH.AREGIMPUTED_3.SurvivalPredictorFull <- c("AGE_SQUAREDAFTER50",
+                                               "SEX",
+                                               "SMOKING",
+                                               "alcohol",
+                                               "BMI",
+                                               "SYSTH",
+                                               "HDL",
+                                               "DIABETES",
+                                               "SUMSCORE_5LEVELS",
+                                               "HOMOC",
+                                               "CREAT_LOG",
+                                               "albumin",
+                                               "STENOSIS",
+                                               "IMT")
+COXPH.AREGIMPUTED_3.SurvivalPredictorReduced <- c("AGE_SQUAREDAFTER50",
+                                               "BMI",
+                                               "HDL",
+                                               "DIABETES",
+                                               "SUMSCORE_5LEVELS",
+                                               "CREAT_LOG",
+                                               "albumin",
+                                               "STENOSIS",
+                                               "IMT")
+
+COXPH.AREGIMPUTED_3.CoxPHModelSummary <- SMART.AREGIMPUTED_3 %>%
+  finalfit(COXPH.AREGIMPUTED_3.SurvivalResponse, 
+           COXPH.AREGIMPUTED_3.SurvivalPredictorFull, 
+           COXPH.AREGIMPUTED_3.SurvivalPredictorReduced, 
+           keep_models = TRUE,
+           add_dependent_label = FALSE) %>%
+  rename("Overall Survival" = label) %>%
+  rename(" " = levels) %>%
+  rename("  " = all)
+
+kable(COXPH.AREGIMPUTED_3.CoxPHModelSummary)
+
+##################################
+# Conducting a likelihood ratio test
+# to compare the FULL and REDUCED models
+##################################
+COXPH.FULLFINAL.AREGIMPUTED_3 <- coxph(Surv(TEVENT,EVENT) ~  AGE_SQUAREDAFTER50 +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL +
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 CREAT_LOG +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_3)
+
+COXPH.REDUCEDFINAL.AREGIMPUTED_3 <- coxph(Surv(TEVENT,EVENT) ~  AGE_SQUAREDAFTER50 +
+                                 BMI +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 CREAT_LOG +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_3)
+
+anova(COXPH.REDUCEDFINAL.AREGIMPUTED_3,
+      COXPH.FULLFINAL.AREGIMPUTED_3,
+      test="LRT")
+
+```
+
+</details>
+
+### 1.2.7 Model Performance Estimation
+|
+| **[A]** The reduced model containing 9 variables was selected as the final model. The p-values for the Likelihood Ratio Test, Wald Test, and Log-Rank Test were all significant, indicating that the model and the variables used were statistically sound for prediction. All three test statistics were in close agreement with the omnibus null hypothesis (that all of the betas are 0) sufficiently rejected. The concordance statistic which represents model discrimination performance was reasonably high at 0.692. 
+|
+| **[B]** The variables which were most predictive of the outcome (presence of cardiovascular events) as indicated by the most significant p-values were <span style="color: #FF0000">AGE_SQUAREDAFTER50</span> (numeric, p-value<0.001), <span style="color: #FF0000">SUMSCORE_5LEVELS</span> (numeric, p-value<0.001) and <span style="color: #FF0000">CREAT_LOG</span> (numeric, p-value<0.001). <span style="color: #FF0000">HDL</span> (numeric, p-value=0.007), <span style="color: #FF0000">albumin</span> (factor, p-values=0.048,0.006), <span style="color: #FF0000">STENOSIS</span> (factor, p-value=0.029) and <span style="color: #FF0000">IMT</span> (numeric, p-value=0.004) were sufficiently predictive variables. While, the <span style="color: #FF0000">BMI</span> (numeric, p-value=0.078) and <span style="color: #FF0000">DIABETES</span> (factor, p-value=0.084) variables were marginally predictive.
+|
+| **[C]** 7/9 variables were associated with higher incidence of cardiovascular events. Their individual main effects holding the other variables constant were described as follows :
+|      **[C.1]** A 10-year increase in age after 50 (<span style="color: #FF0000">AGE=60; AGE_SQUAREDAFTER50=10^2=100</span>) increases the hazard by 14%.
+|      **[C.2]** Having diabetes (<span style="color: #FF0000">DIABETES=1</span>) increases the hazard by 21%.
+|      **[C.3]** A 1-unit increase in the incidence of asymptomatic atherosclerosis (<span style="color: #FF0000">SUMSCORE_5LEVELS=1</span>) increases the hazard by 41%.
+|      **[C.4]** A 10-unit increase in creatinine (<span style="color: #FF0000">CREAT=10; CREAT_LOG=1</span>) increases the hazard by 83%.
+|      **[C.5]** Having micro-albumin (<span style="color: #FF0000">albumin=1(micro)</span>) increases the hazard by 26%, while having macro-albumin (<span style="color: #FF0000">albumin=2(macro)</span>) further increases the hazard by 76%.
+|      **[C.6]** Having stenosis (<span style="color: #FF0000">STENOSIS=1</span>) increases the hazard by 26%.
+|      **[C.7]** A 1-unit increase in intima-media thickness (<span style="color: #FF0000">IMT=1</span>) increases the hazard by 66%.
+|
+| **[D]** 2/9 variables were associated with lower incidence of cardiovascular events. Their individual main effects holding the other variables constant were described as follows :
+|      **[D.1]** A 5-unit increase in body mass index (<span style="color: #FF0000">BMI=5</span>) reduces the hazard by 12%.
+|      **[D.2]** A 1-unit increase in HDL (<span style="color: #FF0000">HDL=1</span>) reduces the hazard by 66%.
+|
+| **[E]** The proportionality assumption was evaluated using the Schoenfeld residuals against the transformed time which showed that:
+|      **[E.1]** The Schoenfeld Test global  p-value was insignificant indicating that the hazard rate determined from the model and the associated variables remained constant over time. The proportionality hazards assumption was met validating the model.
+|      **[E.2]** Individually, the <span style="color: #FF0000">BMI</span>, <span style="color: #FF0000">HDL</span>, <span style="color: #FF0000">DIABETES</span>, <span style="color: #FF0000">CREAT</span>, <span style="color: #FF0000">albumin</span>, <span style="color: #FF0000">STENOSIS</span> and <span style="color: #FF0000">IMT</span> variables showed insignificant Schoenfeld Test p-values indicating no time dependency. However, the <span style="color: #FF0000">AGE_SQUAREDAFTER50</span> and <span style="color: #FF0000">SUMSCORE_5LEVELS</span> variables were potentially time-dependent given their marginally significant Schoenfeld Test p-values. These variables and their corresponding transformations were maintained with no adjustments in the model due to their relatively minimal effect on the overall results although these observation were noted.
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.7, warning=FALSE, message=FALSE}
+##################################
+# Summarizing the FINAL REDUCED model
+##################################
+summary(COXPH.REDUCEDFINAL.AREGIMPUTED_3) 
+
+##################################
+# Describing the main effects
+##################################
+tbl_regression(COXPH.REDUCEDFINAL.AREGIMPUTED_3, 
+               exponentiate = TRUE) 
+
+##################################
+# Formulating the forest plot
+##################################
+(ggforest(COXPH.REDUCEDFINAL.AREGIMPUTED_3, 
+          data=SMART.AREGIMPUTED_3,
+          main = "",
+          fontsize = 0.90))
+
+
+##################################
+# Plotting the Kaplan-Meier survival curves
+##################################
+COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMEstimates <- survfit(COXPH.REDUCEDFINAL.AREGIMPUTED_3, 
+                                                                 data = SMART.AREGIMPUTED_3)
+
+COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMPlot <- ggsurvplot(COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMEstimates,
+                                                      title = "Kaplan-Meier Survival Curve (Final Model)",
+                                                      pval = FALSE,
+                                                      conf.int = TRUE,
+                                                      conf.int.style = "ribbon",
+                                                      xlab = "Time (Days)",
+                                                      ylab="Estimated Probability (Free of Cardiovascular Events)",
+                                                      break.time.by = 365,
+                                                      ggtheme = theme_bw(),
+                                                      risk.table = "abs_pct",
+                                                      risk.table.title="Number at Risk (Estimated Probability)",
+                                                      risk.table.y.text.col = FALSE,
+                                                      risk.table.y.text = TRUE,
+                                                      fontsize = 3,
+                                                      ncensor.plot = FALSE,
+                                                      surv.median.line = "hv",
+                                                      palette = c("#000000"))
+
+ggpar(COXPH.REDUCEDFINAL.AREGIMPUTED_3.KMPlot,
+      font.title = c(14,"bold"),
+      font.x = c(12,"bold"),
+      font.y = c(12,"bold"),
+      font.legend=c(12),
+      font.xtickslab=c(9,"black"),
+      font.ytickslab=c(9,"black"))
+
+##################################
+# Testing for the proportional hazards assumption
+##################################
+(COXPH.REDUCEDFINAL.AREGIMPUTED_3.PHAssumptionCheck <- cox.zph(COXPH.REDUCEDFINAL.AREGIMPUTED_3))
+
+##################################
+# Formulating the graphical verification
+# of the proportional hazards assumption test results
+# using the scaled Schoenfeld residuals against time
+##################################
+(COXPH.REDUCEDFINAL.AREGIMPUTED_3.PHAssumptionPlot <- ggcoxzph(COXPH.REDUCEDFINAL.AREGIMPUTED_3.PHAssumptionCheck,
+         point.col = "red",
+         point.size = 2,
+         point.shape = 19,
+         point.alpha = 0.50,
+  ggtheme = theme_survminer(),
+  font.main = c(12,"bold"),
+  font.x = c(12,"bold"),
+  font.y = c(12,"bold"),
+  font.xtickslab=c(9,"black"),
+  font.ytickslab=c(9,"black")))
+
+```
+
+</details>
+
+### 1.2.8 Model Performance Validation
+|
+| **[A]** The entire process of model development including variable selection was internally validated using a 200-cycle bootstrap to determine the optimism-adjusted model performance. Results showed that:
+|      **[A.1]** Only 183 random seeds of the 200 cycles resulted to valid models. 17 of the random seeds did not generate final models potentially due to the unmet AIC criterion applied during model selection. 
+|      **[A.2]** Optimism in terms of model discrimination using the concordance statistic was estimated to be reasonably low at 0.035. In effect, the optimism-adjusted concordance statistic was computed to be 0.657 from the previously determined optimistic value of 0.692. Results indicate that the overfitting effects during model development were minimal.
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.8, warning=FALSE, message=FALSE}
+##################################
+# Implementing internal cross validation
+##################################
+
+##################################
+# Determining the performance of the
+# Model formulated from original data
+# And evaluated on original data
+##################################
+
+ICV_Data <- SMART.AREGIMPUTED_3
+ICV_Survival <- Surv(time=ICV_Data$TEVENT, event=ICV_Data$EVENT)
+ICV_Original_CoxPH_Full <- cph(ICV_Survival ~ AGE_SQUAREDAFTER50 +
+                                 SEX +
+                                 SMOKING +
+                                 alcohol +
+                                 BMI +
+                                 SYSTH +
+                                 HDL +
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 HOMOC +
+                                 CREAT_LOG +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data=ICV_Data,
+                               x=T,
+                               y=T) 
+
+
+ICV_Original_CoxPH_Backward <- fastbw(ICV_Original_CoxPH_Full,
+                              rule="aic",
+                              type="individual")
+
+ICV_Original_CoxPH_Reduced <- update(ICV_Original_CoxPH_Full,
+                                     ~ICV_Original_CoxPH_Full$x[,ICV_Original_CoxPH_Backward$parms.kept])
+
+ICV_Original_CoxPH_Reduced_Coef <- as.data.frame(coef(ICV_Original_CoxPH_Reduced))
+
+ICV_Original_CoxPH_Full_CoefAdjusted <- ICV_Original_CoxPH_Full$x[,(colnames(ICV_Original_CoxPH_Full$x) %in% rownames(ICV_Original_CoxPH_Reduced_Coef))]
+
+ICV_OriginalOnOriginal_CoxPH_Reduced.LP <- ICV_Original_CoxPH_Full_CoefAdjusted %*% coef(ICV_Original_CoxPH_Reduced)
+
+ICV_OriginalOnOriginal_CoxPH_Reduced.Concordance <- rcorr.cens(-as.numeric(ICV_OriginalOnOriginal_CoxPH_Reduced.LP),ICV_Original_CoxPH_Reduced$y)[1]
+
+ICV_OriginalOnOriginal_CoxPH_Reduced.Concordance[[1]]
+
+##################################
+# Conducting bootstrap validation
+##################################
+
+######################################
+# Generating a random number list
+######################################
+set.seed(123456789)
+RandomSeedList <- (sample.int(99999999,200))
+length(RandomSeedList)
+
+ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance.List <- c()
+ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance.List <- c()
+ICV_CoxPH_Reduced.Concordance.Optimism.List <- c()
+ProcessedSeed.List <- c()
+
+######################################
+# Implementing the bootstrap cycles
+######################################
+
+for (r in 1:length(RandomSeedList)) {
+
+  ##################################
+  # Generating the bootstrap data
+  ##################################
+  
+  (SelectedSeed <- as.integer(RandomSeedList[r]))
+  set.seed(SelectedSeed)
+  ICV_BootstrapRow <- sample(nrow(ICV_Data),
+                              replace=T)
+  
+  ICV_BootstrapData <- ICV_Data[ICV_BootstrapRow,]
+  
+  ICV_BootstrapSurvival <- Surv(time=ICV_BootstrapData$TEVENT, event=ICV_BootstrapData$EVENT)
+  
+  ##################################
+  # Formulating the FULL
+  # Cox Proportional Hazards Model
+  # Using the bootstrap data
+  ##################################
+  
+  ICV_Bootstrap_CoxPH_Full <- cph(ICV_Survival ~ AGE_SQUAREDAFTER50 +
+                                    SEX +
+                                    SMOKING +
+                                    alcohol +
+                                    BMI +
+                                    SYSTH +
+                                    HDL +
+                                    DIABETES +
+                                    SUMSCORE_5LEVELS +
+                                    HOMOC +
+                                    CREAT_LOG +
+                                    albumin +
+                                    STENOSIS +
+                                    IMT,
+                                  data=ICV_BootstrapData,
+                                  x=T,
+                                  y=T) 
+  
+  ##################################
+  # Conducting variable selection
+  # Backward elimination
+  ##################################
+  
+  ICV_Bootstrap_CoxPH_Backward <- fastbw(ICV_Bootstrap_CoxPH_Full,
+                                         rule="aic",
+                                         type="individual")
+  
+  ##################################
+  # Ignoring instances when no 
+  # Reduced model is formulated 
+  # Due to failure to meet
+  # The final model criterion
+  ##################################
+
+  if(is.null(ICV_Bootstrap_CoxPH_Backward$factors.kept)!=TRUE) {
+    
+    (ProcessedSeed <- as.integer(RandomSeedList[r]))
+    
+    print(paste0("Implementing bootstrap cycle ",r))
+    
+    ##################################
+    # Formulating the REDUCED
+    # Cox Proportional Hazards Model
+    # Using the bootstrap data
+    ##################################
+    
+    ICV_Bootstrap_CoxPH_Reduced <- update(ICV_Bootstrap_CoxPH_Full,
+                                          ~ICV_Bootstrap_CoxPH_Full$x[,ICV_Bootstrap_CoxPH_Backward$parms.kept, drop = FALSE])
+    
+    ICV_Bootstrap_CoxPH_Reduced_Coef <- as.data.frame(coef(ICV_Bootstrap_CoxPH_Reduced))
+    
+    ICV_Bootstrap_CoxPH_Reduced_Coef
+    
+    ICV_Bootstrap_CoxPH_Full_CoefAdjusted <- ICV_Bootstrap_CoxPH_Full$x[,(colnames(ICV_Bootstrap_CoxPH_Full$x) %in% rownames(ICV_Bootstrap_CoxPH_Reduced_Coef)), drop = FALSE]
+    
+    ##################################
+    # Determining the performance of the
+    # Model formulated from bootstrap data
+    # And evaluated on bootstrap data
+    ##################################
+    
+    ICV_BootstrapOnBootstrap_CoxPH_Reduced.LP <- ICV_Bootstrap_CoxPH_Full_CoefAdjusted %*% coef(ICV_Bootstrap_CoxPH_Reduced)
+    
+    ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance <- rcorr.cens(-as.numeric(ICV_BootstrapOnBootstrap_CoxPH_Reduced.LP),ICV_Bootstrap_CoxPH_Reduced$y)[1]
+    
+    ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance
+    
+    ICV_Original_CoxPH_Full_CoefAdjusted <- ICV_Original_CoxPH_Full$x[,(colnames(ICV_Original_CoxPH_Full$x) %in% rownames(ICV_Bootstrap_CoxPH_Reduced_Coef)), drop = FALSE]
+    
+    ##################################
+    # Determining the performance of the
+    # Model formulated from bootstrap data
+    # And evaluated on original data
+    ##################################
+    
+    ICV_BootstrapOnOriginal_CoxPH_Reduced.LP <- ICV_Original_CoxPH_Full_CoefAdjusted %*% coef(ICV_Bootstrap_CoxPH_Reduced)
+    
+    ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance <- rcorr.cens(-as.numeric(ICV_BootstrapOnOriginal_CoxPH_Reduced.LP),ICV_Original_CoxPH_Reduced$y)[1]
+    
+    ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance
+    
+    ##################################
+    # Computing for the individual 
+    # Estimated performance optimism
+    ##################################
+    
+    ICV_CoxPH_Reduced.Concordance.Optimism <- ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance - ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance
+    
+    ICV_CoxPH_Reduced.Concordance.Optimism
+    
+    ProcessedSeed.List <- append(ProcessedSeed.List,ProcessedSeed)
+    ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance.List <- append(ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance.List,ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance[[1]])
+    ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance.List <- append(ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance.List,ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance[[1]])
+    ICV_CoxPH_Reduced.Concordance.Optimism.List <- append(ICV_CoxPH_Reduced.Concordance.Optimism.List,ICV_CoxPH_Reduced.Concordance.Optimism)
+    
+  }
+  
+  
+}
+
+##################################
+# Consolidating all the individual 
+# Estimated performance optimism
+##################################
+
+ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary <- cbind(seq(1:length(ProcessedSeed.List)),
+                                                                ProcessedSeed.List,
+                                                                ICV_BootstrapOnBootstrap_CoxPH_Reduced.Concordance.List,
+                                                                ICV_BootstrapOnOriginal_CoxPH_Reduced.Concordance.List,
+                                                                ICV_CoxPH_Reduced.Concordance.Optimism.List)
+
+ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary <- as.data.frame(ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary)
+
+colnames(ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary) <- c("Item",
+                                                                      "Random Seed",
+                                                                      "Bootstrap",
+                                                                      "Test",
+                                                                      "Optimism")
+
+print(ICV_CoxPH_Reduced.Concordance.EstimatedOptimismSummary,row.names=FALSE)
+
+##################################
+# Computing for the mean of the individual 
+# Estimated performance optimism
+##################################
+
+(ICV_CoxPH_Reduced.Concordance.Optimism <- mean(ICV_CoxPH_Reduced.Concordance.Optimism.List))
+
+##################################
+# Determining the optimism-adjusted 
+# Model performance
+##################################
+
+(ICV_CoxPH_Reduced.Concordance.OptimismAdjusted <- ICV_OriginalOnOriginal_CoxPH_Reduced.Concordance - ICV_CoxPH_Reduced.Concordance.Optimism)  
+
+```
+
+</details>
+
+### 1.2.9 Model Presentation
+|
+| **[A]** The reduced model was graphically represented by a nomogram which could generate the survival (probability of being free of a cardiovascular event) for an individual case given the following clinical variables :
+|      **[A.1]** <span style="color: #FF0000">AGE</span> variable (numeric) coded using its squared value after 50 years [if (AGE>50) then (AGE-50)^2 else 0]
+|      **[A.2]** <span style="color: #FF0000">BMI</span> variable (numeric)
+|      **[A.3]** <span style="color: #FF0000">HDL</span> variable (numeric)
+|      **[A.4]** <span style="color: #FF0000">DIABETES</span> variable (factor)
+|      **[A.5]** <span style="color: #FF0000">CEREBRAL</span> variable (numeric), <span style="color: #FF0000">CARDIAC</span> variable (numeric), <span style="color: #FF0000">AAA</span> variable (numeric) and <span style="color: #FF0000">PERIPH</span> variable (numeric) coded using their linear combination [CEREBRAL + CARDIAC + (2*AAA) + PERIPH] called <span style="color: #FF0000">SUMSCORE_5LEVELS</span> variable (numeric)
+|      **[A.6]** <span style="color: #FF0000">CREAT</span> variable (numeric) coded using its logarithm [log(CREAT)]
+|      **[A.7]** <span style="color: #FF0000">ALBUMIN</span> variable (factor)
+|      **[A.8]** <span style="color: #FF0000">STENOSIS</span> variable (factor)
+|      **[A.9]** <span style="color: #FF0000">IMT</span> variable (numeric)
+|
+|
+
+<details><summary><mark style="background-color: #000000;color: #FFFFFF">**Code Chunk | Output**</mark></summary>
+
+```{r section_1.2.9, warning=FALSE, message=FALSE, fig.width=15, fig.height=15}
+COXPH.REDUCED.AREGIMPUTED_3 <-cph(Surv(TEVENT,EVENT) ~  ifelse(AGE>50, (AGE-50)^2,0) +
+                                 BMI +
+                                 HDL+
+                                 DIABETES +
+                                 SUMSCORE_5LEVELS +
+                                 log(CREAT) +
+                                 albumin +
+                                 STENOSIS +
+                                 IMT,
+                               data = SMART.AREGIMPUTED_3,
+                               surv=T)
+
+dd <- datadist(SMART.AREGIMPUTED_3)
+options(datadist="dd")
+
+COXPH.REDUCED.AREGIMPUTED_3.PreNomogram <- Survival(COXPH.REDUCED.AREGIMPUTED_3)
+
+COXPH.REDUCED.AREGIMPUTED_3.Nomogram <- nomogram(COXPH.REDUCED.AREGIMPUTED_3,
+                                                 fun=list(function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(365,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(730,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(1095,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(1460,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(1825,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(2190,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(2555,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(2920,x),
+                                                          function(x) COXPH.REDUCED.AREGIMPUTED_3.PreNomogram(3285,x)),
+                                                 funlabel=c("1-Year Survival",
+                                                            "2-Year Survival",
+                                                            "3-Year Survival",
+                                                            "4-Year Survival",
+                                                            "5-Year Survival",
+                                                            "6-Year Survival",
+                                                            "7-Year Survival",
+                                                            "8-Year Survival",
+                                                            "9-Year Survival"),
+                                                 AGE=c(15,seq(50,85,5)),
+                                                 CREAT=c(60,80,100,150,200,400),
+                                                 lp.at=c(0,1,2,2.4),
+                                                 fun.at=c(0.93,0.90,0.85,0.80,0.70,0.60,0.50),
+                                                 lp=FALSE,
+                                                 maxscale=10)
+
+plot(COXPH.REDUCED.AREGIMPUTED_3.Nomogram)
+
+```
+
+</details>
+
+## 1.3 Model Validity Evaluation
+|
+### 1.3.1 Internal Overfitting
+|
+| Internal overfitting was effectively managed by using a sufficiently large sample size in the study, considering literature and previous research results in the choice of candidate predictors and employing an objective selection of the final predictors.
+|
+### 1.3.2 External Generalizability
+|
+| Although, external generalizability was not particularly assessed in the study, a large set of predictors representing important domains related to the subject matter was considered to ensure that the predictions made from the model are valid for plausibly related populations.
+|
+# **2. Summary** <a name="summary"></a>
+|
+| ![](D:/Github_Codes/ProjectPortfolio/Portfolio_Project_7/docs/Project7_Summary.png)
+|
+# **3. References**
+|
+| **[Book]** [Clinical Prediction Models](http://clinicalpredictionmodels.org/) by Ewout Steyerberg
+| **[Book]** [Survival Analysis: A Self-Learning Text](https://link.springer.com/book/10.1007/978-1-4419-6646-9/) by David Kleinbaum and Mitchel Klein
+| **[Book]** [Applied Survival Analysis Using R](https://link.springer.com/book/10.1007/978-3-319-31245-3/) by Dirk Moore
+| **[Book]** [Regression Modeling Strategies](https://link.springer.com/book/10.1007/978-3-319-19425-7/) by Frank Harrell
+| **[Book]** [R for Health Data Science](https://argoshare.is.ed.ac.uk/healthyr_book/) by Ewen Harrison and Riinu Pius
+| **[Book]** [Supervised Machine Learning](https://bookdown.org/mpfoley1973/supervised-ml/) by Michael Foley
+| **[Book]** [Data Science for Biological, Medical and Health Research](https://thomaselove.github.io/432-notes/index.html) by Thomas Love
+| **[R Package]** [survival](https://cran.microsoft.com/snapshot/2022-04-01/web/packages/survival/index.html/) by Terry Therneau
+| **[R Package]** [survminer](https://cran.r-project.org/web/packages/survminer/index.html/) by Alboukadel Kassambara
+| **[R Package]** [mice](https://www.gerkovink.com/miceVignettes/) by Gerko Vink and Stef van Buuren
+| **[R Package]** [foreign](https://cran.r-project.org/web/packages/foreign/index.html/) by R Core Team
+| **[R Package]** [rms](https://cran.r-project.org/web/packages/rms/index.html/) by Frank Harrell
+| **[R Package]** [Hmisc](https://cran.r-project.org/web/packages/Hmisc//) by Frank Harrell and Charles Dupont
+| **[R Package]** [VIM](https://cran.r-project.org/web/packages/VIM/index.html/) by Matthias Templ
+| **[R Package]** [gridExtra](https://cran.microsoft.com/snapshot/2017-08-01/web/packages/gridExtra/index.html/) by Baptiste Auguie
+| **[R Package]** [finalfit](https://cran.r-project.org/web/packages/finalfit/index.html/) by Ewen Harrison
+| **[R Package]** [knitr](https://cran.r-project.org/web/packages/knitr/index.html/) by Yihui Xie
+| **[R Package]** [dplyr](https://cran.r-project.org/web/packages/dplyr/index.html/) by Hadley Wickham
+| **[R Package]** [gtsummary](https://cran.r-project.org/web/packages/gtsummary/index.html/) by Daniel Sjoberg
+| **[R Package]** [tidyr](https://cran.r-project.org/web/packages/tidyr/index.html/) by Hadley Wickham
+| **[R Package]** [purrr](https://cran.r-project.org/web/packages/purrr//) by Lionel Henry
+| **[R Package]** [moments](https://cran.r-project.org/web/packages/moments/index.html) by Lukasz Komsta and Frederick Novomestky
+| **[Article]** [Survival Analysis](https://sphweb.bumc.bu.edu/otlt/MPH-Modules/BS/BS704_Survival/index.html) by Lisa Sullivan
+
+| **[Article]** [Survival Analysis in R](https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html) by Emily Zabor
+| **[Article]** [Assessment of Discrimination in Survival Analysis](https://rstudio-pubs-static.s3.amazonaws.com/3506_36a9509e9d544386bd3e69de30bca608.html) by R-Studio Team
+| **[Article]** [Cox Proportional-Hazards Regression](https://www.medcalc.org/manual/cox-regression.php) by MedCalc Team
+| **[Article]** [Cox Proportional-Hazards Model](https://rstudio-pubs-static.s3.amazonaws.com/3506_36a9509e9d544386bd3e69de30bca608.html) by R Studio Team
+| **[Article]** [Exploring Time To Event / Survival Data](https://thomaselove.github.io/432-notes/exploring-time-to-event-survival-data.html) by Thomas Love
+| **[Article]** [Survival Analysis](http://www.sthda.com/english/wiki/survival-analysis) by Alboukadel Kassambara
+| **[Article]** [Survival Analysis with R](https://rviews.rstudio.com/2017/09/25/survival-analysis-with-r/) by Joseph Rickert
+| **[Article]** [Cox Model Assumptions](http://www.sthda.com/english/wiki/cox-model-assumptions#testing-non-linearity) by Alboukadel Kassambara
+| **[Article]** [Understanding Predictions in Survival Analysis](https://scikit-survival.readthedocs.io/en/stable/user_guide/understanding_predictions.html) by Scikit Team
+| **[Publication]** [Standards for Reporting Diagnostic Accuracy Studies (STARD): Explanation and Elaboration ](https://www.equator-network.org/reporting-guidelines/stard/) by Patrick Bosuyt (British Medical Journal)
+| **[Publication]** [Transparent Reporting of a Multivariable Prediction Model for Individual Prognosis Or Diagnosis (TRIPOD): Explanation and Elaboration](https://www.acpjournals.org/doi/10.7326/M14-0698) by Karel Moons (Annals of Internal Medicine)
+| **[Publication]** [A Tool to Assess Risk of Bias and Applicability of Prediction Model Studies (PROBAST): Explanation and Elaboration](https://www.acpjournals.org/doi/10.7326/M18-1377) by Karel Moons (Annals of Internal Medicine)
+| **[Publication]** [Guide to Presenting Clinical Prediction Models for Use in Clinical Settings](https://www.bmj.com/content/365/bmj.l737#:~:text=Clinical%20prediction%20models%20estimate%20the%20risk%20of%20existing,such%20as%20logistic%20and%20Cox%20regression%20%28box%201%29.) by Laura J Bonnett, Kym Snell, Gary Collins and Richard Riley (British Medical Journal)
+| **[Publication]** [Survival Analysis Part I: Basic Concepts and First Analyses](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2394262/) by Taane Clark (British Journal of Cancer)
+| **[Publication]** [Survival Analysis Part II: Multivariate Data Analysis – An Introduction to Concepts and Methods](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2394368/) by Mike Bradburn (British Journal of Cancer)
+| **[Publication]** [Survival Analysis Part III: Multivariate Data Analysis – Choosing a Model and Assessing its Adequacy and Fit](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2376927/) by Mike Bradburn (British Journal of Cancer)
+| **[Publication]** [Survival Analysis Part IV: Further Concepts and Methods in Survival Analysis](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2394469/) by Taane Clark (British Journal of Cancer)
+| **[Tutorial]** [Survival Analysis / Time-To-Event Analysis in R](https://campus.datacamp.com/courses/survival-analysis-in-r/what-is-survival-analysis?ex=1) by Heidi Seibold (Datacamp)
+|
+|
+|
+|
+|
