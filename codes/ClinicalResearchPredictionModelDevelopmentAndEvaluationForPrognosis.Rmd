@@ -1,6 +1,6 @@
 ---
 title: 'Supervised Learning : Clinical Research Prediction Model Development and Evaluation for Prognosis'
-author: "John Pauline Pineda"
+author: "<b><a href='https://github.com/JohnPaulinePineda'>John Pauline Pineda</a></b>"
 date: '2022-09-14'
 output: 
   html_document:
@@ -91,16 +91,19 @@ library("gtsummary")
 library("tidyr")
 library("purrr")
 library("moments")
+library("lattice")
 
-######################################
-# Setting the working directory
-######################################
-setwd("D:/R_Codes/Markdown/SurvivalAnalysis")
+##################################
+# Defining file paths
+##################################
+DATASETS_PATH <- file.path("datasets")
 
 ##################################
 # Loading dataset
 ##################################
-SMART <- read.spss("SMARTst.sav",use.value.labels=F,to.data.frame=T)
+SMART <- read.spss(file.path("..", DATASETS_PATH, "SMARTst.sav"),
+                   use.value.labels=F,
+                   to.data.frame=T)
 
 ##################################
 # Performing a general exploration of the dataset
@@ -3529,7 +3532,7 @@ plot(COXPH.REDUCED.AREGIMPUTED_3.Nomogram)
 |
 # **2. Summary** <a name="summary"></a>
 |
-| ![](D:/Github_Codes/ProjectPortfolio/Portfolio_Project_7/docs/Project7_Summary.png)
+| ![](D:/Github_Codes/ProjectPortfolio/Portfolio_Project_7/images/Project7_Summary.png)
 |
 # **3. References**
 |
@@ -3555,6 +3558,7 @@ plot(COXPH.REDUCED.AREGIMPUTED_3.Nomogram)
 | **[R Package]** [tidyr](https://cran.r-project.org/web/packages/tidyr/index.html/) by Hadley Wickham
 | **[R Package]** [purrr](https://cran.r-project.org/web/packages/purrr//) by Lionel Henry
 | **[R Package]** [moments](https://cran.r-project.org/web/packages/moments/index.html) by Lukasz Komsta and Frederick Novomestky
+| **[R Package]** [lattice](https://cran.r-project.org/web/packages/lattice/index.html) by Deepayan Sarkar
 | **[Article]** [Survival Analysis](https://sphweb.bumc.bu.edu/otlt/MPH-Modules/BS/BS704_Survival/index.html) by Lisa Sullivan
 
 | **[Article]** [Survival Analysis in R](https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html) by Emily Zabor
