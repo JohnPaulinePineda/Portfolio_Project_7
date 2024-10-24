@@ -1851,7 +1851,7 @@ DENSITY_SYSTBP <- densityplot(~ Value | Variable,
             plot.points = FALSE, 
             ref = TRUE,
             scales=list(relation="free"),
-            auto.key = list(columns = 1),
+            auto.key = list(adj=1, space="top", columns=1),
             par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_SYSTH <- densityplot(~ Value | Variable, 
@@ -1860,7 +1860,7 @@ DENSITY_SYSTH <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_DIASTBP <- densityplot(~ Value | Variable, 
@@ -1869,7 +1869,7 @@ DENSITY_DIASTBP <- densityplot(~ Value | Variable,
                                plot.points = FALSE, 
                                ref = TRUE,
                                scales=list(relation="free"),
-                               auto.key = list(columns = 1),
+                               auto.key = list(adj=1, space="top", columns=1),
                                par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_DIASTH <- densityplot(~ Value | Variable, 
@@ -1878,7 +1878,7 @@ DENSITY_DIASTH <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_LENGTH <- densityplot(~ Value | Variable, 
@@ -1887,7 +1887,7 @@ DENSITY_LENGTH <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_WEIGHT <- densityplot(~ Value | Variable, 
@@ -1896,7 +1896,7 @@ DENSITY_WEIGHT <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_BMI <- densityplot(~ Value | Variable, 
@@ -1905,7 +1905,7 @@ DENSITY_BMI <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_CHOL <- densityplot(~ Value | Variable, 
@@ -1914,7 +1914,7 @@ DENSITY_CHOL <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_HDL <- densityplot(~ Value | Variable, 
@@ -1923,7 +1923,7 @@ DENSITY_HDL <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_LDL <- densityplot(~ Value | Variable, 
@@ -1932,7 +1932,7 @@ DENSITY_LDL <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_TRIG <- densityplot(~ Value | Variable, 
@@ -1941,7 +1941,7 @@ DENSITY_TRIG <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_HOMOC <- densityplot(~ Value | Variable, 
@@ -1950,7 +1950,7 @@ DENSITY_HOMOC <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_GLUT <- densityplot(~ Value | Variable, 
@@ -1959,7 +1959,7 @@ DENSITY_GLUT <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_CREAT <- densityplot(~ Value | Variable, 
@@ -1968,7 +1968,7 @@ DENSITY_CREAT <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_IMT <- densityplot(~ Value | Variable, 
@@ -1977,7 +1977,7 @@ DENSITY_IMT <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 DENSITY_PACKYRS <- densityplot(~ Value | Variable, 
@@ -1986,7 +1986,7 @@ DENSITY_PACKYRS <- densityplot(~ Value | Variable,
                               plot.points = FALSE, 
                               ref = TRUE,
                               scales=list(relation="free"),
-                              auto.key = list(columns = 1),
+                              auto.key = list(adj=1, space="top", columns=1),
                               par.settings = list(superpose.line = list(lwd=2)))
 
 
@@ -2063,7 +2063,7 @@ BAR_DIABETES <- barchart(Freq ~ Category | Variable,
          groups = Value,
          stack=TRUE,
          ylab = "Proportion",
-         auto.key = list(adj = 1))
+         auto.key = list(adj=1, space="top", columns=2))
 
 
 STENOSIS_complete <- (DPP$STENOSIS[complete.cases(DPP$STENOSIS)])
@@ -2115,7 +2115,7 @@ BAR_STENOSIS <- barchart(Freq ~ Category | Variable,
          groups = Value,
          stack=TRUE,
          ylab = "Proportion",
-         auto.key = list(adj = 1))
+         auto.key = list(adj=1, space="top", columns=2))
 
 ALBUMIN_complete <- (DPP$ albumin [complete.cases(DPP$albumin)])
 
@@ -2166,7 +2166,7 @@ BAR_ALBUMIN <- barchart(Freq ~ Category | Variable,
          groups = Value,
          stack=TRUE,
          ylab = "Proportion",
-         auto.key = list(adj = 1))
+         auto.key = list(adj=1, space="top", columns=3))
 
 SMOKING_complete <- (DPP$ SMOKING [complete.cases(DPP$SMOKING)])
 
@@ -2217,7 +2217,7 @@ BAR_SMOKING <- barchart(Freq ~ Category | Variable,
          groups = Value,
          stack=TRUE,
          ylab = "Proportion",
-         auto.key = list(adj = 1))
+         auto.key = list(adj=1, space="top", columns=3))
 
 ALCOHOL_complete <- (DPP$ alcohol [complete.cases(DPP$alcohol)])
 
@@ -2268,7 +2268,7 @@ BAR_ALCOHOL <- barchart(Freq ~ Category | Variable,
          groups = Value,
          stack=TRUE,
          ylab = "Proportion",
-         auto.key = list(adj = 1))
+         auto.key = list(adj=1, space="top", columns=3))
 
 
 grid.arrange(BAR_DIABETES, 
